@@ -16,7 +16,7 @@ const (
 )
 
 func MoveTo(db *gorm.DB, target Category, to Category, direction MoveDirection) error {
-	var right, depthChange int32
+	var right, depthChange int
 	var newParentId int64
 	if direction == MoveDirectionLeft || direction == MoveDirectionRight {
 		newParentId = to.ParentId
@@ -34,7 +34,7 @@ func MoveTo(db *gorm.DB, target Category, to Category, direction MoveDirection) 
 	return nil
 }
 
-func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange int32, newParentId int64) (err error) {
+func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange int, newParentId int64) (err error) {
 	targetRight := target.Rgt
 	targetLeft := target.Lft
 	targetWidth := targetRight - targetLeft + 1
@@ -48,7 +48,7 @@ func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange i
 		return c.ID
 	}).([]int64)
 
-	var moveStep, affectedStep, affectedGte, affectedLte int32
+	var moveStep, affectedStep, affectedGte, affectedLte int
 	moveStep = position - targetLeft + 1
 	if moveStep < 0 {
 		affectedGte = position + 1
@@ -75,7 +75,7 @@ func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange i
 	return
 }
 
-func moveTarget(db *gorm.DB, targetId int64, targetIds []int64, step, depthChange int32, newParentId int64) (err error) {
+func moveTarget(db *gorm.DB, targetId int64, targetIds []int64, step, depthChange int, newParentId int64) (err error) {
 	tableName := Category{}.TableName()
 	sql := fmt.Sprintf(`
 UPDATE %s
@@ -91,7 +91,7 @@ WHERE id IN (?);
 	return db.Exec(fmt.Sprintf("UPDATE %s SET parent_id=? WHERE id=?", tableName), newParentId, targetId).Error
 }
 
-func moveAffected(db *gorm.DB, gte, lte, step int32) (err error) {
+func moveAffected(db *gorm.DB, gte, lte, step int) (err error) {
 	tableName := Category{}.TableName()
 	sql := fmt.Sprintf(`
 UPDATE %s
@@ -102,7 +102,7 @@ WHERE (lft BETWEEN ? AND ?) OR (rgt BETWEEN ? AND ?);
 	return db.Exec(sql, gte, step, lte, step, gte, lte, gte, lte).Error
 }
 
-func findCategories(query *gorm.DB, left, right int32) (categories []Category, err error) {
+func findCategories(query *gorm.DB, left, right int) (categories []Category, err error) {
 	err = query.Where("rgt>=? AND rgt <=?", left, right).Find(&categories).Error
 	return
 }
