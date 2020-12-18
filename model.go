@@ -2,11 +2,10 @@ package nested_set
 
 type Category struct {
 	ID       int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT"`
-	Title    string
 	ParentId int64
-	Rgt      int
-	Lft      int
-	Depth    int
+	Rgt      int32
+	Lft      int32
+	Depth    int32
 }
 
 func (Category) TableName() string {
