@@ -1,6 +1,8 @@
 package nested_set
 
 import (
+	"fmt"
+
 	"github.com/thoas/go-funk"
 	"gorm.io/gorm"
 )
@@ -74,28 +76,30 @@ func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange i
 }
 
 func moveTarget(db *gorm.DB, targetId int64, targetIds []int64, step, depthChange int, newParentId int64) (err error) {
-	sql := `
-UPDATE categories
+	tableName := Category{}.TableName()
+	sql := fmt.Sprintf(`
+UPDATE %s
 SET lft=lft+?,
 	rgt=rgt+?,
 	depth=depth+?
 WHERE id IN (?);
-  `
+  `, tableName)
 	err = db.Exec(sql, step, step, depthChange, targetIds).Error
 	if err != nil {
 		return
 	}
-	return db.Exec("UPDATE categories SET parent_id=? WHERE id=?", newParentId, targetId).Error
+	return db.Exec(fmt.Sprintf("UPDATE %s SET parent_id=? WHERE id=?", tableName), newParentId, targetId).Error
 }
 
 func moveAffected(db *gorm.DB, gte, lte, step int) (err error) {
-	sql := `
-UPDATE categories
+	tableName := Category{}.TableName()
+	sql := fmt.Sprintf(`
+UPDATE %s
 SET lft=(CASE WHEN lft>=? THEN lft+? ELSE lft END),
 	rgt=(CASE WHEN rgt<=? THEN rgt+? ELSE rgt END)
 WHERE (lft BETWEEN ? AND ?) OR (rgt BETWEEN ? AND ?);
-  `
-	return db.Debug().Exec(sql, gte, step, lte, step, gte, lte, gte, lte).Error
+  `, tableName)
+	return db.Exec(sql, gte, step, lte, step, gte, lte, gte, lte).Error
 }
 
 func findCategories(query *gorm.DB, left, right int) (categories []Category, err error) {
