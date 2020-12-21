@@ -11,7 +11,7 @@ func TestReloadData(t *testing.T) {
 	reloadCategories()
 }
 
-func Test_newNodeItem(t *testing.T) {
+func TestNewNodeItem(t *testing.T) {
 	source := Category{
 		ID:            123,
 		ParentID:      100,
@@ -23,13 +23,12 @@ func Test_newNodeItem(t *testing.T) {
 	node, err := newNodeItem(gormMock, source)
 	assert.NoError(t, err)
 	assert.Equal(t, source.ID, node.ID)
-	assert.Equal(t, source.ParentID, node.ParentId)
+	assert.Equal(t, source.ParentID, node.ParentID)
 	assert.Equal(t, source.Depth, node.Depth)
 	assert.Equal(t, source.Lft, node.Lft)
 	assert.Equal(t, source.Rgt, node.Rgt)
 	assert.Equal(t, source.ChildrenCount, node.ChildrenCount)
 	assert.Equal(t, "categories", node.TableName)
-
 }
 
 func TestMoveToRight(t *testing.T) {
