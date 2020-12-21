@@ -1,6 +1,7 @@
 package nested_set
 
 import (
+	"database/sql"
 	"fmt"
 	"testing"
 
@@ -121,9 +122,13 @@ func TestMoveToInner(t *testing.T) {
 
 func assertCategoryEqual(t *testing.T, target Category, left, right, depth, childrenCount int, parentId int64) {
 	fmt.Printf("Asserting %s(%d)\n", target.Title, target.ID)
+	parentIdNullInt64 := sql.NullInt64{Valid: false}
+	if parentId != 0 {
+		parentIdNullInt64 = sql.NullInt64{Valid: true, Int64: parentId}
+	}
 	assert.Equal(t, target.Lft, left)
 	assert.Equal(t, target.Rgt, right)
 	assert.Equal(t, target.Depth, depth)
 	assert.Equal(t, target.ChildrenCount, childrenCount)
-	assert.Equal(t, target.ParentId, parentId)
+	assert.Equal(t, target.ParentId, parentIdNullInt64)
 }

@@ -25,11 +25,10 @@ var (
 var clothing, mens, suits, slacks, jackets, womens, dresses, skirts, blouses, eveningGowns, sunDresses Category
 
 var CategoryFactory = factory.NewFactory(&Category{
-	Title:    "Clothing",
-	ParentId: 0,
-	Rgt:      1,
-	Lft:      2,
-	Depth:    0,
+	Title: "Clothing",
+	Rgt:   1,
+	Lft:   2,
+	Depth: 0,
 }).
 	OnCreate(func(args factory.Args) error {
 		return gormMock.Create(args.Instance()).Error
@@ -69,6 +68,7 @@ func initData() {
 func buildTestData() {
 	clothing = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Clothing",
+		"ParentId":      sql.NullInt64{Valid: false},
 		"Lft":           1,
 		"Rgt":           22,
 		"Depth":         0,
@@ -76,7 +76,7 @@ func buildTestData() {
 	}).(*Category)
 	mens = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Men's",
-		"ParentId":      clothing.ID,
+		"ParentId":      sql.NullInt64{Valid: true, Int64: clothing.ID},
 		"Lft":           2,
 		"Rgt":           9,
 		"Depth":         1,
@@ -84,7 +84,7 @@ func buildTestData() {
 	}).(*Category)
 	suits = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Suits",
-		"ParentId":      mens.ID,
+		"ParentId":      sql.NullInt64{Valid: true, Int64: mens.ID},
 		"Lft":           3,
 		"Rgt":           8,
 		"Depth":         2,
@@ -92,21 +92,21 @@ func buildTestData() {
 	}).(*Category)
 	slacks = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Slacks",
-		"ParentId": suits.ID,
+		"ParentId": sql.NullInt64{Valid: true, Int64: suits.ID},
 		"Lft":      4,
 		"Rgt":      5,
 		"Depth":    3,
 	}).(*Category)
 	jackets = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Jackets",
-		"ParentId": suits.ID,
+		"ParentId": sql.NullInt64{Valid: true, Int64: suits.ID},
 		"Lft":      6,
 		"Rgt":      7,
 		"Depth":    3,
 	}).(*Category)
 	womens = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Women's",
-		"ParentId":      clothing.ID,
+		"ParentId":      sql.NullInt64{Valid: true, Int64: clothing.ID},
 		"Lft":           10,
 		"Rgt":           21,
 		"Depth":         1,
@@ -114,7 +114,7 @@ func buildTestData() {
 	}).(*Category)
 	dresses = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Dresses",
-		"ParentId":      womens.ID,
+		"ParentId":      sql.NullInt64{Valid: true, Int64: womens.ID},
 		"Lft":           11,
 		"Rgt":           16,
 		"Depth":         2,
@@ -122,28 +122,28 @@ func buildTestData() {
 	}).(*Category)
 	eveningGowns = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Evening Gowns",
-		"ParentId": dresses.ID,
+		"ParentId": sql.NullInt64{Valid: true, Int64: dresses.ID},
 		"Lft":      12,
 		"Rgt":      13,
 		"Depth":    3,
 	}).(*Category)
 	sunDresses = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Sun Dresses",
-		"ParentId": dresses.ID,
+		"ParentId": sql.NullInt64{Valid: true, Int64: dresses.ID},
 		"Lft":      14,
 		"Rgt":      15,
 		"Depth":    3,
 	}).(*Category)
 	skirts = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Skirts",
-		"ParentId": womens.ID,
+		"ParentId": sql.NullInt64{Valid: true, Int64: womens.ID},
 		"Lft":      17,
 		"Rgt":      18,
 		"Depth":    2,
 	}).(*Category)
 	blouses = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Blouses",
-		"ParentId": womens.ID,
+		"ParentId": sql.NullInt64{Valid: true, Int64: womens.ID},
 		"Lft":      19,
 		"Rgt":      20,
 		"Depth":    2,

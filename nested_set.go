@@ -1,6 +1,7 @@
 package nested_set
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/thoas/go-funk"
@@ -17,7 +18,7 @@ const (
 
 func MoveTo(db *gorm.DB, target Category, to Category, direction MoveDirection) error {
 	var right, depthChange int
-	var newParentId int64
+	var newParentId sql.NullInt64
 	if direction == MoveDirectionLeft || direction == MoveDirectionRight {
 		newParentId = to.ParentId
 		depthChange = to.Depth - target.Depth
@@ -26,7 +27,7 @@ func MoveTo(db *gorm.DB, target Category, to Category, direction MoveDirection) 
 			right = to.Lft - 1
 		}
 	} else {
-		newParentId = to.ID
+		newParentId = sql.NullInt64{Int64: to.ID, Valid: true}
 		depthChange = to.Depth + 1 - target.Depth
 		right = to.Lft
 	}
@@ -34,7 +35,7 @@ func MoveTo(db *gorm.DB, target Category, to Category, direction MoveDirection) 
 	return nil
 }
 
-func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange int, newParentId int64) error {
+func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange int, newParentId sql.NullInt64) error {
 	return db.Transaction(func(tx *gorm.DB) (err error) {
 		oldParentId := target.ParentId
 		targetRight := target.Rgt
@@ -80,13 +81,13 @@ func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange i
 	})
 }
 
-func syncChildrenCount(db *gorm.DB, oldParentId, newParentId int64) (err error) {
+func syncChildrenCount(db *gorm.DB, oldParentId, newParentId sql.NullInt64) (err error) {
 	ids := []int64{}
-	if newParentId > 0 {
-		ids = append(ids, newParentId)
+	if oldParentId.Valid {
+		ids = append(ids, oldParentId.Int64)
 	}
-	if oldParentId > 0 {
-		ids = append(ids, oldParentId)
+	if newParentId.Valid {
+		ids = append(ids, newParentId.Int64)
 	}
 	if len(ids) == 0 {
 		return nil
@@ -102,7 +103,7 @@ WHERE a.id IN (?)
 	return db.Exec(sql, ids).Error
 }
 
-func moveTarget(db *gorm.DB, targetId int64, targetIds []int64, step, depthChange int, newParentId int64) (err error) {
+func moveTarget(db *gorm.DB, targetId int64, targetIds []int64, step, depthChange int, newParentId sql.NullInt64) (err error) {
 	tableName := Category{}.TableName()
 	sql := fmt.Sprintf(`
 UPDATE %s
