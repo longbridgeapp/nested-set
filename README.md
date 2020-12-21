@@ -1,13 +1,21 @@
-# go-nested-set
+# Go Nested Set
 
-go-nested-set is an implementation of the [Nested set model](https://en.wikipedia.org/wiki/Nested_set_model) for [GORM](https://gorm.io/index.html)
+[![build](https://github.com/griffinqiu/go-nested-set/workflows/build/badge.svg)](https://github.com/griffinqiu/go-nested-set/actions?query=workflow%3Abuild)
+
+Go Nested Set is an implementation of the [Nested set model](https://en.wikipedia.org/wiki/Nested_set_model) for [Gorm](https://gorm.io/index.html).
+
+## Installation
+
+```
+go get github.com/griffinqiu/go-nested-set
+```
 
 ## Usage
 
 ### Define the model
 
 ```go
-import nestedset "github.com/griffinqiu/go-nested-set"
+import "github.com/griffinqiu/go-nested-set"
 
 // Toc table of contents
 type Toc struct {

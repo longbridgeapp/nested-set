@@ -1,4 +1,4 @@
-package nested_set
+package nestedset
 
 import (
 	"database/sql"
