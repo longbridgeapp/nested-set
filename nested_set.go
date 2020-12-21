@@ -54,12 +54,14 @@ func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange i
 		affectedGte = position + 1
 		affectedLte = targetLeft - 1
 		affectedStep = targetWidth
-	} else {
+	} else if moveStep > 0 {
 		affectedGte = targetRight + 1
 		affectedLte = position
 		affectedStep = targetWidth * -1
 		// 向后移需要减去本身的宽度
 		moveStep = moveStep - targetWidth
+	} else {
+		return nil
 	}
 
 	err = moveAffected(db, affectedGte, affectedLte, affectedStep)
