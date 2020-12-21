@@ -61,9 +61,9 @@ func newNodeItem(db *gorm.DB, source interface{}) (nodeItem, error) {
 	return item, nil
 }
 
-// MoveTo move node
-func MoveTo(db *gorm.DB, target interface{}, to interface{}, direction MoveDirection) error {
-	targetNode, err := newNodeItem(db, target)
+// MoveTo move node to other node
+func MoveTo(db *gorm.DB, node interface{}, to interface{}, direction MoveDirection) error {
+	targetNode, err := newNodeItem(db, node)
 	if err != nil {
 		return err
 	}
@@ -76,8 +76,8 @@ func MoveTo(db *gorm.DB, target interface{}, to interface{}, direction MoveDirec
 	var right, depthChange int
 	var newParentId int64
 	if direction == MoveDirectionLeft || direction == MoveDirectionRight {
-		newParentId = targetNode.ParentId
-		depthChange = toNode.Depth - toNode.Depth
+		newParentId = toNode.ParentId
+		depthChange = toNode.Depth - targetNode.Depth
 		right = toNode.Rgt
 		if direction == MoveDirectionLeft {
 			right = toNode.Lft - 1

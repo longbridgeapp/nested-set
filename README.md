@@ -6,20 +6,6 @@ Go Nested Set is an implementation of the [Nested set model](https://en.wikipedi
 
 This is a Go version of the [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set).
 
-## Database struct
-
-```go
-type Category struct {
-	ID            int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT"`
-	Name          string
-	ParentId      sql.NullInt64
-	Rgt           int
-	Lft           int
-	Depth         int
-	ChildrenCount int
-}
-```
-
 ## Installation
 
 ```
@@ -30,14 +16,31 @@ go get github.com/griffinqiu/go-nested-set
 
 ### Define the model
 
+You must use `nestedset` Stuct tag to define your Gorm model like this:
+
+Support struct tags:
+
+- `id` - int64 - Primary key of the node
+- `parent_id` - int64 - ParentID column, 0 is root
+- `lft` - int
+- `rgt` - int
+- `depth` - int - Depth of the node
+- `children_count` - Number of children
+
+Example:
+
 ```go
 import "github.com/griffinqiu/go-nested-set"
 
-// Toc table of contents
+// Category
 type Category struct {
-	nestedset.Node
-	Name string
-	Status int
+	ID            int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
+	Title         string
+	ParentID      int64 `nestedset:"parent_id"`
+	Rgt           int   `nestedset:"rgt"`
+	Lft           int   `nestedset:"lft"`
+	Depth         int   `nestedset:"depth"`
+	ChildrenCount int   `nestedset:"children_count"`
 }
 ```
 
@@ -49,5 +52,6 @@ import nestedset "github.com/griffinqiu/go-nested-set"
 // nestedset.MoveDirectionLeft
 // nestedset.MoveDirectionRight
 // nestedset.MoveDirectionInner
-nestedset.MoveTo(gormDB, category.Node, category.Node, nestedset.MoveDirectionLeft)
+
+nestedset.MoveTo(gormDB, node, to, nestedset.MoveDirectionLeft)
 ```
