@@ -1,0 +1,25 @@
+name: build
+on: push
+jobs:
+  build:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - go: 1.14
+          postgres: 10
+    env:
+      DATABASE_URL: ${{ matrix.gemfile }}
+      USE_OFFICIAL_GEM_SOURCE: 1
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+    - uses: ankane/setup-postgres@v1
+      with:
+        postgres-version: ${{ matrix.postgres }}
+    - run: createdb test
+    - run: go test ./...

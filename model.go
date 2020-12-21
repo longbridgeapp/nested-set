@@ -1,8 +1,8 @@
-package nested_set
+package nestedset
 
 import "database/sql"
 
-type Category struct {
+type Node struct {
 	ID            int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT"`
 	Title         string
 	ParentId      sql.NullInt64
@@ -12,6 +12,6 @@ type Category struct {
 	ChildrenCount int
 }
 
-func (Category) TableName() string {
+func (Node) TableName() string {
 	return "course_chapters"
 }

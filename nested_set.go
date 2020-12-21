@@ -1,4 +1,4 @@
-package nested_set
+package nestedset
 
 import (
 	"database/sql"
@@ -16,7 +16,7 @@ const (
 	MoveDirectionInner MoveDirection = 3
 )
 
-func MoveTo(db *gorm.DB, target Category, to Category, direction MoveDirection) error {
+func MoveTo(db *gorm.DB, target Node, to Node, direction MoveDirection) error {
 	var right, depthChange int
 	var newParentId sql.NullInt64
 	if direction == MoveDirectionLeft || direction == MoveDirectionRight {
@@ -35,7 +35,7 @@ func MoveTo(db *gorm.DB, target Category, to Category, direction MoveDirection) 
 	return nil
 }
 
-func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange int, newParentId sql.NullInt64) error {
+func moveToRightOfPosition(db *gorm.DB, target Node, position, depthChange int, newParentId sql.NullInt64) error {
 	return db.Transaction(func(tx *gorm.DB) (err error) {
 		oldParentId := target.ParentId
 		targetRight := target.Rgt
@@ -47,7 +47,7 @@ func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange i
 			return
 		}
 
-		targetIds := funk.Map(targets, func(c Category) int64 {
+		targetIds := funk.Map(targets, func(c Node) int64 {
 			return c.ID
 		}).([]int64)
 
@@ -93,7 +93,7 @@ func syncChildrenCount(db *gorm.DB, oldParentId, newParentId sql.NullInt64) (err
 		return nil
 	}
 
-	tableName := Category{}.TableName()
+	tableName := Node{}.TableName()
 	sql := fmt.Sprintf(`
 UPDATE %s as a
 SET children_count=(SELECT COUNT(1) FROM course_chapters AS b WHERE a.id=b.parent_id)
@@ -104,7 +104,7 @@ WHERE a.id IN (?)
 }
 
 func moveTarget(db *gorm.DB, targetId int64, targetIds []int64, step, depthChange int, newParentId sql.NullInt64) (err error) {
-	tableName := Category{}.TableName()
+	tableName := Node{}.TableName()
 	sql := fmt.Sprintf(`
 UPDATE %s
 SET lft=lft+?,
@@ -120,7 +120,7 @@ WHERE id IN (?);
 }
 
 func moveAffected(db *gorm.DB, gte, lte, step int) (err error) {
-	tableName := Category{}.TableName()
+	tableName := Node{}.TableName()
 	sql := fmt.Sprintf(`
 UPDATE %s
 SET lft=(CASE WHEN lft>=? THEN lft+? ELSE lft END),
@@ -130,12 +130,12 @@ WHERE (lft BETWEEN ? AND ?) OR (rgt BETWEEN ? AND ?);
 	return db.Exec(sql, gte, step, lte, step, gte, lte, gte, lte).Error
 }
 
-func findCategories(query *gorm.DB, left, right int) (categories []Category, err error) {
+func findCategories(query *gorm.DB, left, right int) (categories []Node, err error) {
 	err = query.Where("rgt>=? AND rgt <=?", left, right).Find(&categories).Error
 	return
 }
 
-func findCategory(query *gorm.DB, id int64) (category Category, err error) {
-	err = query.Where("id=?", id).Find(&category).Error
+func findNode(query *gorm.DB, id int64) (Node Node, err error) {
+	err = query.Where("id=?", id).Find(&Node).Error
 	return
 }
