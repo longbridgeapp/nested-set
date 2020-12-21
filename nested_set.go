@@ -34,47 +34,72 @@ func MoveTo(db *gorm.DB, target Category, to Category, direction MoveDirection) 
 	return nil
 }
 
-func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange int, newParentId int64) (err error) {
-	targetRight := target.Rgt
-	targetLeft := target.Lft
-	targetWidth := targetRight - targetLeft + 1
+func moveToRightOfPosition(db *gorm.DB, target Category, position, depthChange int, newParentId int64) error {
+	return db.Transaction(func(tx *gorm.DB) (err error) {
+		oldParentId := target.ParentId
+		targetRight := target.Rgt
+		targetLeft := target.Lft
+		targetWidth := targetRight - targetLeft + 1
 
-	targets, err := findCategories(db, targetLeft, targetRight)
-	if err != nil {
-		return
+		targets, err := findCategories(tx, targetLeft, targetRight)
+		if err != nil {
+			return
+		}
+
+		targetIds := funk.Map(targets, func(c Category) int64 {
+			return c.ID
+		}).([]int64)
+
+		var moveStep, affectedStep, affectedGte, affectedLte int
+		moveStep = position - targetLeft + 1
+		if moveStep < 0 {
+			affectedGte = position + 1
+			affectedLte = targetLeft - 1
+			affectedStep = targetWidth
+		} else if moveStep > 0 {
+			affectedGte = targetRight + 1
+			affectedLte = position
+			affectedStep = targetWidth * -1
+			// 向后移需要减去本身的宽度
+			moveStep = moveStep - targetWidth
+		} else {
+			return nil
+		}
+
+		err = moveAffected(tx, affectedGte, affectedLte, affectedStep)
+		if err != nil {
+			return
+		}
+
+		err = moveTarget(tx, target.ID, targetIds, moveStep, depthChange, newParentId)
+		if err != nil {
+			return
+		}
+
+		return syncChildrenCount(tx, oldParentId, newParentId)
+	})
+}
+
+func syncChildrenCount(db *gorm.DB, oldParentId, newParentId int64) (err error) {
+	ids := []int64{}
+	if newParentId > 0 {
+		ids = append(ids, newParentId)
 	}
-
-	targetIds := funk.Map(targets, func(c Category) int64 {
-		return c.ID
-	}).([]int64)
-
-	var moveStep, affectedStep, affectedGte, affectedLte int
-	moveStep = position - targetLeft + 1
-	if moveStep < 0 {
-		affectedGte = position + 1
-		affectedLte = targetLeft - 1
-		affectedStep = targetWidth
-	} else if moveStep > 0 {
-		affectedGte = targetRight + 1
-		affectedLte = position
-		affectedStep = targetWidth * -1
-		// 向后移需要减去本身的宽度
-		moveStep = moveStep - targetWidth
-	} else {
+	if oldParentId > 0 {
+		ids = append(ids, oldParentId)
+	}
+	if len(ids) == 0 {
 		return nil
 	}
 
-	err = moveAffected(db, affectedGte, affectedLte, affectedStep)
-	if err != nil {
-		return
-	}
+	tableName := Category{}.TableName()
+	sql := fmt.Sprintf(`
+UPDATE %s as a
+SET children_count=(SELECT COUNT(1) FROM course_chapters AS b WHERE a.id=b.parent_id)
+WHERE a.id IN (?)
+  `, tableName)
 
-	err = moveTarget(db, target.ID, targetIds, moveStep, depthChange, newParentId)
-	if err != nil {
-		return
-	}
-
-	return
+	return db.Exec(sql, ids).Error
 }
 
 func moveTarget(db *gorm.DB, targetId int64, targetIds []int64, step, depthChange int, newParentId int64) (err error) {

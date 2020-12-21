@@ -68,24 +68,27 @@ func initData() {
 
 func buildTestData() {
 	clothing = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
-		"Title": "Clothing",
-		"Lft":   1,
-		"Rgt":   22,
-		"Depth": 0,
+		"Title":         "Clothing",
+		"Lft":           1,
+		"Rgt":           22,
+		"Depth":         0,
+		"ChildrenCount": 2,
 	}).(*Category)
 	mens = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
-		"Title":    "Men's",
-		"ParentId": clothing.ID,
-		"Lft":      2,
-		"Rgt":      9,
-		"Depth":    1,
+		"Title":         "Men's",
+		"ParentId":      clothing.ID,
+		"Lft":           2,
+		"Rgt":           9,
+		"Depth":         1,
+		"ChildrenCount": 1,
 	}).(*Category)
 	suits = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
-		"Title":    "Suits",
-		"ParentId": mens.ID,
-		"Lft":      3,
-		"Rgt":      8,
-		"Depth":    2,
+		"Title":         "Suits",
+		"ParentId":      mens.ID,
+		"Lft":           3,
+		"Rgt":           8,
+		"Depth":         2,
+		"ChildrenCount": 2,
 	}).(*Category)
 	slacks = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Slacks",
@@ -102,18 +105,20 @@ func buildTestData() {
 		"Depth":    3,
 	}).(*Category)
 	womens = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
-		"Title":    "Women's",
-		"ParentId": clothing.ID,
-		"Lft":      10,
-		"Rgt":      21,
-		"Depth":    1,
+		"Title":         "Women's",
+		"ParentId":      clothing.ID,
+		"Lft":           10,
+		"Rgt":           21,
+		"Depth":         1,
+		"ChildrenCount": 3,
 	}).(*Category)
 	dresses = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
-		"Title":    "Dresses",
-		"ParentId": womens.ID,
-		"Lft":      11,
-		"Rgt":      16,
-		"Depth":    2,
+		"Title":         "Dresses",
+		"ParentId":      womens.ID,
+		"Lft":           11,
+		"Rgt":           16,
+		"Depth":         2,
+		"ChildrenCount": 2,
 	}).(*Category)
 	eveningGowns = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Evening Gowns",
