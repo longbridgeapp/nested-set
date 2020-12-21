@@ -5,14 +5,23 @@ go-nested-set is an implementation of the [Nested set model](https://en.wikipedi
 
 ## Usage
 
+### Define the model
+
 ```go
-type CourseChapter struct {
+import nestedset "github.com/griffinqiu/go-nested-set"
+
+type Chapter struct {
 	nestedset.Category
-	Status      int32
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	Status int
 }
+```
 
+### Move position
+``` go
+import nestedset "github.com/griffinqiu/go-nested-set"
 
+// nestedset.MoveDirectionLeft
+// nestedset.MoveDirectionRight
+// nestedset.MoveDirectionInner
 nestedset.MoveTo(gormDB, chapter.Category, toChapter.Category, nestedset.MoveDirectionLeft)
 ```
