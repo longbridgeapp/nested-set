@@ -27,13 +27,29 @@ var (
 
 	ctx = context.TODO()
 )
-var clothing, mens, suits, slacks, jackets, womens, dresses, skirts, blouses, eveningGowns, sunDresses Node
+var clothing, mens, suits, slacks, jackets, womens, dresses, skirts, blouses, eveningGowns, sunDresses Category
 
-var NodeFactory = factory.NewFactory(&Node{
-	Title: "Clothing",
-	Rgt:   1,
-	Lft:   2,
-	Depth: 0,
+type Category struct {
+	ID            int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
+	Title         string
+	ParentID      int64 `nestedset:"parent_id"`
+	Rgt           int   `nestedset:"rgt"`
+	Lft           int   `nestedset:"lft"`
+	Depth         int   `nestedset:"depth"`
+	ChildrenCount int   `nestedset:"children_count"`
+}
+
+func findNode(query *gorm.DB, id int64) (category Category, err error) {
+	err = query.Where("id=?", id).Find(&category).Error
+	return
+}
+
+var CategoryFactory = factory.NewFactory(&Category{
+	Title:    "Clothing",
+	ParentID: 0,
+	Rgt:      1,
+	Lft:      2,
+	Depth:    0,
 }).
 	OnCreate(func(args factory.Args) error {
 		return gormMock.Create(args.Instance()).Error
@@ -60,9 +76,9 @@ func newMock(_db *sql.DB) *gorm.DB {
 }
 
 func initData() {
-	gormMock.Exec("DROP TABLE IF EXISTS " + Node{}.TableName())
+	gormMock.Exec("DROP TABLE IF EXISTS categories")
 	err := gormMock.AutoMigrate(
-		&Node{},
+		&Category{},
 	)
 	if err != nil {
 		panic(err)
@@ -72,88 +88,87 @@ func initData() {
 }
 
 func buildTestData() {
-	clothing = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	clothing = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Clothing",
-		"ParentId":      sql.NullInt64{Valid: false},
 		"Lft":           1,
 		"Rgt":           22,
 		"Depth":         0,
 		"ChildrenCount": 2,
-	}).(*Node)
-	mens = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	mens = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Men's",
-		"ParentId":      sql.NullInt64{Valid: true, Int64: clothing.ID},
+		"ParentID":      clothing.ID,
 		"Lft":           2,
 		"Rgt":           9,
 		"Depth":         1,
 		"ChildrenCount": 1,
-	}).(*Node)
-	suits = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	suits = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Suits",
-		"ParentId":      sql.NullInt64{Valid: true, Int64: mens.ID},
+		"ParentID":      mens.ID,
 		"Lft":           3,
 		"Rgt":           8,
 		"Depth":         2,
 		"ChildrenCount": 2,
-	}).(*Node)
-	slacks = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	slacks = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Slacks",
-		"ParentId": sql.NullInt64{Valid: true, Int64: suits.ID},
+		"ParentID": suits.ID,
 		"Lft":      4,
 		"Rgt":      5,
 		"Depth":    3,
-	}).(*Node)
-	jackets = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	jackets = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Jackets",
-		"ParentId": sql.NullInt64{Valid: true, Int64: suits.ID},
+		"ParentID": suits.ID,
 		"Lft":      6,
 		"Rgt":      7,
 		"Depth":    3,
-	}).(*Node)
-	womens = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	womens = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Women's",
-		"ParentId":      sql.NullInt64{Valid: true, Int64: clothing.ID},
+		"ParentID":      clothing.ID,
 		"Lft":           10,
 		"Rgt":           21,
 		"Depth":         1,
 		"ChildrenCount": 3,
-	}).(*Node)
-	dresses = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	dresses = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Dresses",
-		"ParentId":      sql.NullInt64{Valid: true, Int64: womens.ID},
+		"ParentID":      womens.ID,
 		"Lft":           11,
 		"Rgt":           16,
 		"Depth":         2,
 		"ChildrenCount": 2,
-	}).(*Node)
-	eveningGowns = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	eveningGowns = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Evening Gowns",
-		"ParentId": sql.NullInt64{Valid: true, Int64: dresses.ID},
+		"ParentID": dresses.ID,
 		"Lft":      12,
 		"Rgt":      13,
 		"Depth":    3,
-	}).(*Node)
-	sunDresses = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	sunDresses = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Sun Dresses",
-		"ParentId": sql.NullInt64{Valid: true, Int64: dresses.ID},
+		"ParentID": dresses.ID,
 		"Lft":      14,
 		"Rgt":      15,
 		"Depth":    3,
-	}).(*Node)
-	skirts = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	skirts = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Skirts",
-		"ParentId": sql.NullInt64{Valid: true, Int64: womens.ID},
+		"ParentID": womens.ID,
 		"Lft":      17,
 		"Rgt":      18,
 		"Depth":    2,
-	}).(*Node)
-	blouses = *NodeFactory.MustCreateWithOption(map[string]interface{}{
+	}).(*Category)
+	blouses = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":    "Blouses",
-		"ParentId": sql.NullInt64{Valid: true, Int64: womens.ID},
+		"ParentID": womens.ID,
 		"Lft":      19,
 		"Rgt":      20,
 		"Depth":    2,
-	}).(*Node)
+	}).(*Category)
 }
 
 func reloadCategories() {
