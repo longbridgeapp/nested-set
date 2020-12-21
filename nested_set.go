@@ -1,8 +1,8 @@
 package nestedset
 
 import (
-	"database/sql"
 	"fmt"
+	"reflect"
 
 	"github.com/thoas/go-funk"
 	"gorm.io/gorm"
@@ -16,40 +16,93 @@ const (
 	MoveDirectionInner MoveDirection = 3
 )
 
-func MoveTo(db *gorm.DB, target Node, to Node, direction MoveDirection) error {
+type nodeItem struct {
+	ID            int64
+	ParentId      int64
+	Depth         int
+	Rgt           int
+	Lft           int
+	ChildrenCount int
+	TableName     string
+}
+
+func newNodeItem(db *gorm.DB, source interface{}) (nodeItem, error) {
+	err := db.Statement.Parse(source)
+	if err != nil {
+		return nodeItem{}, fmt.Errorf("Invalid source, must be Gorm Model instance, %v", source)
+	}
+	item := nodeItem{TableName: db.Statement.Table}
+	t := reflect.TypeOf(source)
+	tv := reflect.ValueOf(source)
+	for i := 0; i < t.NumField(); i++ {
+		v := tv.Field(i)
+		switch t.Field(i).Tag.Get("nestedset") {
+		case "id":
+			item.ID = v.Int()
+			break
+		case "parent_id":
+			item.ParentId = v.Int()
+			break
+		case "depth":
+			item.Depth = int(v.Int())
+			break
+		case "rgt":
+			item.Rgt = int(v.Int())
+			break
+		case "lft":
+			item.Lft = int(v.Int())
+			break
+		case "children_count":
+			item.ChildrenCount = int(v.Int())
+			break
+		}
+	}
+
+	return item, nil
+}
+
+// MoveTo move node
+func MoveTo(db *gorm.DB, target interface{}, to interface{}, direction MoveDirection) error {
+	targetNode, err := newNodeItem(db, target)
+	if err != nil {
+		return err
+	}
+
+	toNode, err := newNodeItem(db, to)
+	if err != nil {
+		return err
+	}
+
 	var right, depthChange int
-	var newParentId sql.NullInt64
+	var newParentId int64
 	if direction == MoveDirectionLeft || direction == MoveDirectionRight {
-		newParentId = to.ParentId
-		depthChange = to.Depth - target.Depth
-		right = to.Rgt
+		newParentId = targetNode.ParentId
+		depthChange = toNode.Depth - toNode.Depth
+		right = toNode.Rgt
 		if direction == MoveDirectionLeft {
-			right = to.Lft - 1
+			right = toNode.Lft - 1
 		}
 	} else {
-		newParentId = sql.NullInt64{Int64: to.ID, Valid: true}
-		depthChange = to.Depth + 1 - target.Depth
-		right = to.Lft
+		newParentId = toNode.ID
+		depthChange = toNode.Depth + 1 - targetNode.Depth
+		right = toNode.Lft
 	}
-	moveToRightOfPosition(db, target, right, depthChange, newParentId)
+	moveToRightOfPosition(db, targetNode, right, depthChange, newParentId)
 	return nil
 }
 
-func moveToRightOfPosition(db *gorm.DB, target Node, position, depthChange int, newParentId sql.NullInt64) error {
+func moveToRightOfPosition(db *gorm.DB, targetNode nodeItem, position, depthChange int, newParentId int64) error {
 	return db.Transaction(func(tx *gorm.DB) (err error) {
-		oldParentId := target.ParentId
-		targetRight := target.Rgt
-		targetLeft := target.Lft
+		oldParentId := targetNode.ParentId
+		targetRight := targetNode.Rgt
+		targetLeft := targetNode.Lft
 		targetWidth := targetRight - targetLeft + 1
 
-		targets, err := findCategories(tx, targetLeft, targetRight)
+		targetIds := []int64{}
+		err = tx.Table(targetNode.TableName).Where("rgt>=? AND rgt <=?", targetLeft, targetRight).Pluck("id", &targetIds).Error
 		if err != nil {
 			return
 		}
-
-		targetIds := funk.Map(targets, func(c Node) int64 {
-			return c.ID
-		}).([]int64)
 
 		var moveStep, affectedStep, affectedGte, affectedLte int
 		moveStep = position - targetLeft + 1
@@ -67,44 +120,44 @@ func moveToRightOfPosition(db *gorm.DB, target Node, position, depthChange int, 
 			return nil
 		}
 
-		err = moveAffected(tx, affectedGte, affectedLte, affectedStep)
+		err = moveAffected(tx, targetNode.TableName, affectedGte, affectedLte, affectedStep)
 		if err != nil {
 			return
 		}
 
-		err = moveTarget(tx, target.ID, targetIds, moveStep, depthChange, newParentId)
+		err = moveTarget(tx, targetNode.TableName, targetNode.ID, targetIds, moveStep, depthChange, newParentId)
 		if err != nil {
 			return
 		}
 
-		return syncChildrenCount(tx, oldParentId, newParentId)
+		return syncChildrenCount(tx, targetNode.TableName, oldParentId, newParentId)
 	})
 }
 
-func syncChildrenCount(db *gorm.DB, oldParentId, newParentId sql.NullInt64) (err error) {
+func syncChildrenCount(db *gorm.DB, tableName string, oldParentId, newParentId int64) (err error) {
 	ids := []int64{}
-	if oldParentId.Valid {
-		ids = append(ids, oldParentId.Int64)
+	if oldParentId != 0 {
+		ids = append(ids, oldParentId)
 	}
-	if newParentId.Valid {
-		ids = append(ids, newParentId.Int64)
+	if newParentId != 0 {
+		ids = append(ids, newParentId)
 	}
 	if len(ids) == 0 {
 		return nil
 	}
 
-	tableName := Node{}.TableName()
+	ids = funk.UniqInt64(ids)
+
 	sql := fmt.Sprintf(`
 UPDATE %s as a
-SET children_count=(SELECT COUNT(1) FROM course_chapters AS b WHERE a.id=b.parent_id)
+SET children_count=(SELECT COUNT(1) FROM %s AS b WHERE a.id=b.parent_id)
 WHERE a.id IN (?)
-  `, tableName)
+	`, tableName, tableName)
 
 	return db.Exec(sql, ids).Error
 }
 
-func moveTarget(db *gorm.DB, targetId int64, targetIds []int64, step, depthChange int, newParentId sql.NullInt64) (err error) {
-	tableName := Node{}.TableName()
+func moveTarget(db *gorm.DB, tableName string, targetId int64, targetIds []int64, step, depthChange int, newParentId int64) (err error) {
 	sql := fmt.Sprintf(`
 UPDATE %s
 SET lft=lft+?,
@@ -119,8 +172,7 @@ WHERE id IN (?);
 	return db.Exec(fmt.Sprintf("UPDATE %s SET parent_id=? WHERE id=?", tableName), newParentId, targetId).Error
 }
 
-func moveAffected(db *gorm.DB, gte, lte, step int) (err error) {
-	tableName := Node{}.TableName()
+func moveAffected(db *gorm.DB, tableName string, gte, lte, step int) (err error) {
 	sql := fmt.Sprintf(`
 UPDATE %s
 SET lft=(CASE WHEN lft>=? THEN lft+? ELSE lft END),
@@ -128,14 +180,4 @@ SET lft=(CASE WHEN lft>=? THEN lft+? ELSE lft END),
 WHERE (lft BETWEEN ? AND ?) OR (rgt BETWEEN ? AND ?);
   `, tableName)
 	return db.Exec(sql, gte, step, lte, step, gte, lte, gte, lte).Error
-}
-
-func findCategories(query *gorm.DB, left, right int) (categories []Node, err error) {
-	err = query.Where("rgt>=? AND rgt <=?", left, right).Find(&categories).Error
-	return
-}
-
-func findNode(query *gorm.DB, id int64) (Node Node, err error) {
-	err = query.Where("id=?", id).Find(&Node).Error
-	return
 }

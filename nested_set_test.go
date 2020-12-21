@@ -1,7 +1,6 @@
 package nestedset
 
 import (
-	"database/sql"
 	"fmt"
 	"testing"
 
@@ -10,6 +9,27 @@ import (
 
 func TestReloadData(t *testing.T) {
 	reloadCategories()
+}
+
+func Test_newNodeItem(t *testing.T) {
+	source := Category{
+		ID:            123,
+		ParentID:      100,
+		Depth:         2,
+		Rgt:           12,
+		Lft:           32,
+		ChildrenCount: 10,
+	}
+	node, err := newNodeItem(gormMock, source)
+	assert.NoError(t, err)
+	assert.Equal(t, source.ID, node.ID)
+	assert.Equal(t, source.ParentID, node.ParentId)
+	assert.Equal(t, source.Depth, node.Depth)
+	assert.Equal(t, source.Lft, node.Lft)
+	assert.Equal(t, source.Rgt, node.Rgt)
+	assert.Equal(t, source.ChildrenCount, node.ChildrenCount)
+	assert.Equal(t, "categories", node.TableName)
+
 }
 
 func TestMoveToRight(t *testing.T) {
@@ -120,15 +140,11 @@ func TestMoveToInner(t *testing.T) {
 	assertNodeEqual(t, blouses, 19, 20, 2, 0, womens.ID)
 }
 
-func assertNodeEqual(t *testing.T, target Node, left, right, depth, childrenCount int, parentId int64) {
+func assertNodeEqual(t *testing.T, target Category, left, right, depth, childrenCount int, parentID int64) {
 	fmt.Printf("Asserting %s(%d)\n", target.Title, target.ID)
-	parentIdNullInt64 := sql.NullInt64{Valid: false}
-	if parentId != 0 {
-		parentIdNullInt64 = sql.NullInt64{Valid: true, Int64: parentId}
-	}
 	assert.Equal(t, target.Lft, left)
 	assert.Equal(t, target.Rgt, right)
 	assert.Equal(t, target.Depth, depth)
 	assert.Equal(t, target.ChildrenCount, childrenCount)
-	assert.Equal(t, target.ParentId, parentIdNullInt64)
+	assert.Equal(t, target.ParentID, parentID)
 }
