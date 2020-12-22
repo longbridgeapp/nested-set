@@ -16,16 +16,6 @@ This is a Go version of the [awesome_nested_set](https://github.com/collectiveid
 go get github.com/griffinqiu/go-nested-set
 ```
 
-## Testing
-```bash
-# create a test db named [nested_set_test]
-$DATABASE_URL="postgres://postgres:postgres@localhost:5432/nested_set_test?sslmode=disable" go test -v
-```
-```sql
--- play with testing results
-SELECT * FROM categories;
-```
-
 ## Usage
 
 ### Define the model
@@ -69,3 +59,14 @@ import nestedset "github.com/griffinqiu/go-nested-set"
 
 nestedset.MoveTo(gormDB, node, to, nestedset.MoveDirectionLeft)
 ```
+
+## Testing
+
+```bash
+$ createdb nested-set-test
+$ go test ./...
+```
+
+## License
+
+MIT

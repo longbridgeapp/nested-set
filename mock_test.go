@@ -16,7 +16,7 @@ import (
 func databaseURL() string {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if len(databaseURL) == 0 {
-		databaseURL = "postgres://localhost:5432/test?sslmode=disable"
+		databaseURL = "postgres://localhost:5432/nested-set-test?sslmode=disable"
 	}
 	return databaseURL
 }

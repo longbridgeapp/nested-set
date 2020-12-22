@@ -21,5 +21,5 @@ jobs:
     - uses: ankane/setup-postgres@v1
       with:
         postgres-version: ${{ matrix.postgres }}
-    - run: createdb test
+    - run: createdb nested-set-test
     - run: go test ./...
