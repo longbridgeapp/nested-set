@@ -32,11 +32,13 @@ var clothing, mens, suits, slacks, jackets, womens, dresses, skirts, blouses, ev
 type Category struct {
 	ID            int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
 	Title         string
-	ParentID      int64 `nestedset:"parent_id"`
-	Rgt           int   `nestedset:"rgt"`
-	Lft           int   `nestedset:"lft"`
-	Depth         int   `nestedset:"depth"`
-	ChildrenCount int   `nestedset:"children_count"`
+	UserType      string `nestedset:"scope"`
+	UserID        int64  `nestedset:"scope"`
+	ParentID      int64  `nestedset:"parent_id"`
+	Rgt           int    `nestedset:"rgt"`
+	Lft           int    `nestedset:"lft"`
+	Depth         int    `nestedset:"depth"`
+	ChildrenCount int    `nestedset:"children_count"`
 }
 
 func findNode(query *gorm.DB, id int64) (category Category, err error) {
@@ -47,6 +49,8 @@ func findNode(query *gorm.DB, id int64) (category Category, err error) {
 var CategoryFactory = factory.NewFactory(&Category{
 	Title:    "Clothing",
 	ParentID: 0,
+	UserType: "User",
+	UserID:   int64(100),
 	Rgt:      1,
 	Lft:      2,
 	Depth:    0,

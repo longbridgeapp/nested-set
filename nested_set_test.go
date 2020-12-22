@@ -19,8 +19,10 @@ func TestNewNodeItem(t *testing.T) {
 		Rgt:           12,
 		Lft:           32,
 		ChildrenCount: 10,
+		UserType:      "Group",
+		UserID:        101,
 	}
-	node, err := newNodeItem(gormMock, source)
+	tx, node, err := newNodeItem(gormMock, source)
 	assert.NoError(t, err)
 	assert.Equal(t, source.ID, node.ID)
 	assert.Equal(t, source.ParentID, node.ParentID)
@@ -28,6 +30,8 @@ func TestNewNodeItem(t *testing.T) {
 	assert.Equal(t, source.Lft, node.Lft)
 	assert.Equal(t, source.Rgt, node.Rgt)
 	assert.Equal(t, source.ChildrenCount, node.ChildrenCount)
+	assert.Equal(t, "categories", node.TableName)
+	// assert.Equal(t, 2, len(tx.Statement.Clauses))
 }
 
 func TestMoveToRight(t *testing.T) {
