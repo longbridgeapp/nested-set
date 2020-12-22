@@ -31,6 +31,10 @@ Support struct tags:
 - `depth` - int - Depth of the node
 - `children_count` - Number of children
 
+Optional:
+
+- `scope` - restricts what is to be considered a list. You can also setup scope by multiple attributes.
+
 Example:
 
 ```go
