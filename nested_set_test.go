@@ -28,13 +28,13 @@ func TestNewNodeItem(t *testing.T) {
 	assert.Equal(t, source.Lft, node.Lft)
 	assert.Equal(t, source.Rgt, node.Rgt)
 	assert.Equal(t, source.ChildrenCount, node.ChildrenCount)
-	assert.Equal(t, "categories", node.TableName)
 }
 
 func TestMoveToRight(t *testing.T) {
 	// case 1
 	initData()
-	MoveTo(gormMock, dresses, jackets, MoveDirectionRight)
+	db := gormMock.Table("categories")
+	MoveTo(db, dresses, jackets, MoveDirectionRight)
 	reloadCategories()
 
 	assertNodeEqual(t, clothing, 1, 22, 0, 2, 0)
@@ -51,7 +51,7 @@ func TestMoveToRight(t *testing.T) {
 
 	// case 2
 	initData()
-	MoveTo(gormMock, suits, blouses, MoveDirectionRight)
+	MoveTo(db, suits, blouses, MoveDirectionRight)
 	reloadCategories()
 
 	assertNodeEqual(t, clothing, 1, 22, 0, 2, 0)
@@ -70,7 +70,8 @@ func TestMoveToRight(t *testing.T) {
 func TestMoveToLeft(t *testing.T) {
 	// case 1
 	initData()
-	MoveTo(gormMock, dresses, jackets, MoveDirectionLeft)
+	db := gormMock.Table("categories")
+	MoveTo(db, dresses, jackets, MoveDirectionLeft)
 	reloadCategories()
 
 	assertNodeEqual(t, clothing, 1, 22, 0, 2, 0)
@@ -87,7 +88,7 @@ func TestMoveToLeft(t *testing.T) {
 
 	// case 2
 	initData()
-	MoveTo(gormMock, suits, blouses, MoveDirectionLeft)
+	MoveTo(db, suits, blouses, MoveDirectionLeft)
 	reloadCategories()
 
 	assertNodeEqual(t, clothing, 1, 22, 0, 2, 0)
@@ -106,7 +107,8 @@ func TestMoveToLeft(t *testing.T) {
 func TestMoveToInner(t *testing.T) {
 	// case 1
 	initData()
-	MoveTo(gormMock, mens, blouses, MoveDirectionInner)
+	db := gormMock.Table("categories")
+	MoveTo(db, mens, blouses, MoveDirectionInner)
 	reloadCategories()
 
 	assertNodeEqual(t, clothing, 1, 22, 0, 1, 0)
@@ -123,7 +125,7 @@ func TestMoveToInner(t *testing.T) {
 
 	// case 2
 	initData()
-	MoveTo(gormMock, skirts, slacks, MoveDirectionInner)
+	MoveTo(db, skirts, slacks, MoveDirectionInner)
 	reloadCategories()
 
 	assertNodeEqual(t, clothing, 1, 22, 0, 2, 0)
