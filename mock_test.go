@@ -84,7 +84,6 @@ func initData() {
 		panic(err)
 	}
 	buildTestData()
-
 }
 
 func buildTestData() {
