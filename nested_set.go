@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/thoas/go-funk"
 	"gorm.io/gorm"
 )
 
@@ -29,7 +28,6 @@ type nodeItem struct {
 	Rgt           int
 	Lft           int
 	ChildrenCount int
-	TableName     string
 }
 
 func newNodeItem(db *gorm.DB, source interface{}) (nodeItem, error) {
@@ -38,7 +36,7 @@ func newNodeItem(db *gorm.DB, source interface{}) (nodeItem, error) {
 		return nodeItem{}, fmt.Errorf("Invalid source, must be a valid Gorm Model instance, %v", source)
 	}
 
-	item := nodeItem{TableName: db.Statement.Table}
+	item := nodeItem{}
 	t := reflect.TypeOf(source)
 	v := reflect.ValueOf(source)
 	for i := 0; i < t.NumField(); i++ {
@@ -69,7 +67,7 @@ func newNodeItem(db *gorm.DB, source interface{}) (nodeItem, error) {
 }
 
 // MoveTo move node to a position which is related a target node
-func MoveTo(db *gorm.DB, node interface{}, to interface{}, direction MoveDirection) error {
+func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 	targetNode, err := newNodeItem(db, node)
 	if err != nil {
 		return err
@@ -107,7 +105,7 @@ func moveToRightOfPosition(db *gorm.DB, targetNode nodeItem, position, depthChan
 		targetWidth := targetRight - targetLeft + 1
 
 		targetIds := []int64{}
-		err = tx.Table(targetNode.TableName).Where("rgt>=? AND rgt <=?", targetLeft, targetRight).Pluck("id", &targetIds).Error
+		err = tx.Where("rgt>=? AND rgt <=?", targetLeft, targetRight).Pluck("id", &targetIds).Error
 		if err != nil {
 			return
 		}
@@ -129,64 +127,65 @@ func moveToRightOfPosition(db *gorm.DB, targetNode nodeItem, position, depthChan
 			return nil
 		}
 
-		err = moveAffected(tx, targetNode.TableName, affectedGte, affectedLte, affectedStep)
+		err = moveAffected(tx, affectedGte, affectedLte, affectedStep)
 		if err != nil {
 			return
 		}
 
-		err = moveTarget(tx, targetNode.TableName, targetNode.ID, targetIds, moveStep, depthChange, newParentID)
+		err = moveTarget(tx, targetNode.ID, targetIds, moveStep, depthChange, newParentID)
 		if err != nil {
 			return
 		}
 
-		return syncChildrenCount(tx, targetNode.TableName, oldParentID, newParentID)
+		return syncChildrenCount(tx, oldParentID, newParentID)
 	})
 }
 
-func syncChildrenCount(db *gorm.DB, tableName string, oldParentID, newParentID int64) (err error) {
-	ids := []int64{}
+func syncChildrenCount(db *gorm.DB, oldParentID, newParentID int64) (err error) {
+	var oldParentCount, newParentCount int64
 	if oldParentID != 0 {
-		ids = append(ids, oldParentID)
+		err = db.Where("parent_id=?", oldParentID).Count(&oldParentCount).Error
+		if err != nil {
+			return
+		}
+		err = db.Where("id=?", oldParentID).Update("children_count", oldParentCount).Error
+		if err != nil {
+			return
+		}
 	}
+
 	if newParentID != 0 {
-		ids = append(ids, newParentID)
+		err = db.Where("parent_id=?", newParentID).Count(&newParentCount).Error
+		if err != nil {
+			return
+		}
+		err = db.Where("id=?", newParentID).Update("children_count", newParentCount).Error
+		if err != nil {
+			return
+		}
 	}
-	if len(ids) == 0 {
-		return nil
-	}
-
-	ids = funk.UniqInt64(ids)
-
-	sql := fmt.Sprintf(`
-UPDATE %s as a
-SET children_count=(SELECT COUNT(1) FROM %s AS b WHERE a.id=b.parent_id)
-WHERE a.id IN (?)
-	`, tableName, tableName)
-
-	return db.Exec(sql, ids).Error
+	return nil
 }
 
-func moveTarget(db *gorm.DB, tableName string, targetID int64, targetIds []int64, step, depthChange int, newParentID int64) (err error) {
-	sql := fmt.Sprintf(`
-UPDATE %s
-SET lft=lft+?,
-	rgt=rgt+?,
-	depth=depth+?
-WHERE id IN (?);
-  `, tableName)
-	err = db.Exec(sql, step, step, depthChange, targetIds).Error
-	if err != nil {
-		return
+func moveTarget(db *gorm.DB, targetID int64, targetIds []int64, step, depthChange int, newParentID int64) (err error) {
+	if len(targetIds) > 0 {
+		err = db.Where("id IN (?)", targetIds).
+			Updates(map[string]interface{}{
+				"lft":   gorm.Expr("lft+?", step),
+				"rgt":   gorm.Expr("rgt+?", step),
+				"depth": gorm.Expr("depth+?", depthChange),
+			}).Error
+		if err != nil {
+			return
+		}
 	}
-	return db.Exec(fmt.Sprintf("UPDATE %s SET parent_id=? WHERE id=?", tableName), newParentID, targetID).Error
+	return db.Where("id=?", targetID).Update("parent_id", newParentID).Error
 }
 
-func moveAffected(db *gorm.DB, tableName string, gte, lte, step int) (err error) {
-	sql := fmt.Sprintf(`
-UPDATE %s
-SET lft=(CASE WHEN lft>=? THEN lft+? ELSE lft END),
-	rgt=(CASE WHEN rgt<=? THEN rgt+? ELSE rgt END)
-WHERE (lft BETWEEN ? AND ?) OR (rgt BETWEEN ? AND ?);
-  `, tableName)
-	return db.Exec(sql, gte, step, lte, step, gte, lte, gte, lte).Error
+func moveAffected(db *gorm.DB, gte, lte, step int) (err error) {
+	return db.Where("(lft BETWEEN ? AND ?) OR (rgt BETWEEN ? AND ?)", gte, lte, gte, lte).
+		Updates(map[string]interface{}{
+			"lft": gorm.Expr("(CASE WHEN lft>=? THEN lft+? ELSE lft END)", gte, step),
+			"rgt": gorm.Expr("(CASE WHEN rgt<=? THEN rgt+? ELSE rgt END)", lte, step),
+		}).Error
 }
