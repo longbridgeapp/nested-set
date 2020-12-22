@@ -25,7 +25,7 @@ You must use `nestedset` Stuct tag to define your Gorm model like this:
 Support struct tags:
 
 - `id` - int64 - Primary key of the node
-- `parent_id` - int64 - ParentID column, 0 is root
+- `parent_id` - int64 - ParentID column, null is root
 - `lft` - int
 - `rgt` - int
 - `depth` - int - Depth of the node
@@ -34,19 +34,23 @@ Support struct tags:
 Example:
 
 ```go
-import "github.com/griffinqiu/go-nested-set"
+import (
+	"database/sql"
+
+  "github.com/griffinqiu/go-nested-set"
+)
 
 // Category
 type Category struct {
-	ID            int64  `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
+	ID            int64         `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
+	ParentID      sql.NullInt64 `nestedset:"parent_id"`
+	UserType      string        `nestedset:"scope"`
+	UserID        int64         `nestedset:"scope"`
+	Rgt           int           `nestedset:"rgt"`
+	Lft           int           `nestedset:"lft"`
+	Depth         int           `nestedset:"depth"`
+	ChildrenCount int           `nestedset:"children_count"`
 	Title         string
-	ParentID      int64  `nestedset:"parent_id"`
-	UserType      string `nestedset:"scope"`
-	UserID        int64  `nestedset:"scope"`
-	Rgt           int    `nestedset:"rgt"`
-	Lft           int    `nestedset:"lft"`
-	Depth         int    `nestedset:"depth"`
-	ChildrenCount int    `nestedset:"children_count"`
 }
 ```
 

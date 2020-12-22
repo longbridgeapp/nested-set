@@ -2,6 +2,7 @@ package nestedset
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"reflect"
 	"strings"
@@ -26,7 +27,7 @@ const (
 
 type nodeItem struct {
 	ID            int64
-	ParentID      int64
+	ParentID      sql.NullInt64
 	Depth         int
 	Rgt           int
 	Lft           int
@@ -52,6 +53,7 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 
 	item = nodeItem{TableName: stmt.Table, DbNames: map[string]string{}}
 	sourceType := reflect.TypeOf(source)
+	fmt.Printf("sourceType:%s\n", sourceType)
 	sourceValue := reflect.Indirect(reflect.ValueOf(source))
 	for i := 0; i < sourceType.NumField(); i++ {
 		t := sourceType.Field(i)
@@ -66,7 +68,7 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 			item.DbNames["id"] = dbName
 			break
 		case "parent_id":
-			item.ParentID = v.Int()
+			item.ParentID = v.Interface().(sql.NullInt64)
 			item.DbNames["parent_id"] = dbName
 			break
 		case "depth":
@@ -110,7 +112,7 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 	tx = tx.Table(targetNode.TableName)
 
 	var right, depthChange int
-	var newParentID int64
+	var newParentID sql.NullInt64
 	if direction == MoveDirectionLeft || direction == MoveDirectionRight {
 		newParentID = toNode.ParentID
 		depthChange = toNode.Depth - targetNode.Depth
@@ -120,7 +122,7 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 			right = toNode.Rgt
 		}
 	} else {
-		newParentID = toNode.ID
+		newParentID = sql.NullInt64{Int64: toNode.ID, Valid: true}
 		depthChange = toNode.Depth + 1 - targetNode.Depth
 		right = toNode.Lft
 	}
@@ -128,7 +130,7 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 	return moveToRightOfPosition(tx, targetNode, right, depthChange, newParentID)
 }
 
-func moveToRightOfPosition(tx *gorm.DB, targetNode nodeItem, position, depthChange int, newParentID int64) error {
+func moveToRightOfPosition(tx *gorm.DB, targetNode nodeItem, position, depthChange int, newParentID sql.NullInt64) error {
 	return tx.Transaction(func(tx *gorm.DB) (err error) {
 		oldParentID := targetNode.ParentID
 		targetRight := targetNode.Rgt
@@ -172,9 +174,9 @@ func moveToRightOfPosition(tx *gorm.DB, targetNode nodeItem, position, depthChan
 	})
 }
 
-func syncChildrenCount(tx *gorm.DB, targetNode nodeItem, oldParentID, newParentID int64) (err error) {
+func syncChildrenCount(tx *gorm.DB, targetNode nodeItem, oldParentID, newParentID sql.NullInt64) (err error) {
 	var oldParentCount, newParentCount int64
-	if oldParentID != 0 {
+	if oldParentID.Valid {
 		err = tx.Where(formatSQL(":parent_id = ?", targetNode), oldParentID).Count(&oldParentCount).Error
 		if err != nil {
 			return
@@ -185,7 +187,7 @@ func syncChildrenCount(tx *gorm.DB, targetNode nodeItem, oldParentID, newParentI
 		}
 	}
 
-	if newParentID != 0 {
+	if newParentID.Valid {
 		err = tx.Where(formatSQL(":parent_id = ?", targetNode), newParentID).Count(&newParentCount).Error
 		if err != nil {
 			return
@@ -198,7 +200,7 @@ func syncChildrenCount(tx *gorm.DB, targetNode nodeItem, oldParentID, newParentI
 	return nil
 }
 
-func moveTarget(tx *gorm.DB, targetNode nodeItem, targetID int64, targetIds []int64, step, depthChange int, newParentID int64) (err error) {
+func moveTarget(tx *gorm.DB, targetNode nodeItem, targetID int64, targetIds []int64, step, depthChange int, newParentID sql.NullInt64) (err error) {
 	dbNames := targetNode.DbNames
 
 	if len(targetIds) > 0 {
