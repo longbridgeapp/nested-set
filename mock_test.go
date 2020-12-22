@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/bluele/factory-go/factory"
 	"gorm.io/driver/postgres"
@@ -23,7 +24,7 @@ func databaseURL() string {
 
 var (
 	memoryDB, _ = sql.Open("postgres", databaseURL())
-	gormMock    = newMock(memoryDB)
+	db          = newMock(memoryDB)
 
 	ctx = context.TODO()
 )
@@ -32,11 +33,27 @@ var clothing, mens, suits, slacks, jackets, womens, dresses, skirts, blouses, ev
 type Category struct {
 	ID            int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
 	Title         string
-	ParentID      int64 `nestedset:"parent_id"`
-	Rgt           int   `nestedset:"rgt"`
-	Lft           int   `nestedset:"lft"`
-	Depth         int   `nestedset:"depth"`
-	ChildrenCount int   `nestedset:"children_count"`
+	UserID        int    `nestedset:"scope"`
+	UserType      string `nestedset:"scope"`
+	ParentID      int64  `nestedset:"parent_id"`
+	Rgt           int    `nestedset:"rgt"`
+	Lft           int    `nestedset:"lft"`
+	Depth         int    `nestedset:"depth"`
+	ChildrenCount int    `nestedset:"children_count"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type SpecialItem struct {
+	ItemID     int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
+	Title      string
+	Pid        int64 `nestedset:"parent_id"`
+	Right      int   `nestedset:"rgt"`
+	Left       int   `nestedset:"lft"`
+	Depth1     int   `nestedset:"depth"`
+	NodesCount int   `nestedset:"children_count"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 func findNode(query *gorm.DB, id int64) (category Category, err error) {
@@ -47,12 +64,14 @@ func findNode(query *gorm.DB, id int64) (category Category, err error) {
 var CategoryFactory = factory.NewFactory(&Category{
 	Title:    "Clothing",
 	ParentID: 0,
+	UserType: "User",
+	UserID:   999,
 	Rgt:      1,
 	Lft:      2,
 	Depth:    0,
 }).
 	OnCreate(func(args factory.Args) error {
-		return gormMock.Create(args.Instance()).Error
+		return db.Create(args.Instance()).Error
 	})
 
 func newMock(_db *sql.DB) *gorm.DB {
@@ -76,9 +95,11 @@ func newMock(_db *sql.DB) *gorm.DB {
 }
 
 func initData() {
-	gormMock.Exec("DROP TABLE IF EXISTS categories")
-	err := gormMock.AutoMigrate(
+	db.Exec("DROP TABLE IF EXISTS categories")
+	db.Exec("DROP TABLE IF EXISTS special_items")
+	err := db.AutoMigrate(
 		&Category{},
+		&SpecialItem{},
 	)
 	if err != nil {
 		panic(err)
@@ -94,6 +115,17 @@ func buildTestData() {
 		"Depth":         0,
 		"ChildrenCount": 2,
 	}).(*Category)
+
+	// Create a category in other group
+	_ = CategoryFactory.MustCreateWithOption(map[string]interface{}{
+		"Title":         "Clothing",
+		"Lft":           1,
+		"UserID":        98,
+		"Rgt":           22,
+		"Depth":         0,
+		"ChildrenCount": 2,
+	}).(*Category)
+
 	mens = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Men's",
 		"ParentID":      clothing.ID,
@@ -171,15 +203,15 @@ func buildTestData() {
 }
 
 func reloadCategories() {
-	clothing, _ = findNode(gormMock, clothing.ID)
-	mens, _ = findNode(gormMock, mens.ID)
-	suits, _ = findNode(gormMock, suits.ID)
-	slacks, _ = findNode(gormMock, slacks.ID)
-	jackets, _ = findNode(gormMock, jackets.ID)
-	womens, _ = findNode(gormMock, womens.ID)
-	dresses, _ = findNode(gormMock, dresses.ID)
-	skirts, _ = findNode(gormMock, skirts.ID)
-	blouses, _ = findNode(gormMock, blouses.ID)
-	eveningGowns, _ = findNode(gormMock, eveningGowns.ID)
-	sunDresses, _ = findNode(gormMock, sunDresses.ID)
+	clothing, _ = findNode(db, clothing.ID)
+	mens, _ = findNode(db, mens.ID)
+	suits, _ = findNode(db, suits.ID)
+	slacks, _ = findNode(db, slacks.ID)
+	jackets, _ = findNode(db, jackets.ID)
+	womens, _ = findNode(db, womens.ID)
+	dresses, _ = findNode(db, dresses.ID)
+	skirts, _ = findNode(db, skirts.ID)
+	blouses, _ = findNode(db, blouses.ID)
+	eveningGowns, _ = findNode(db, eveningGowns.ID)
+	sunDresses, _ = findNode(db, sunDresses.ID)
 }
