@@ -39,8 +39,7 @@ Example:
 
 ```go
 import (
-	"database/sql"
-
+  "database/sql"
   "github.com/griffinqiu/go-nested-set"
 )
 
