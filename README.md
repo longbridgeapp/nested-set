@@ -25,7 +25,7 @@ You must use `nestedset` Stuct tag to define your Gorm model like this:
 Support struct tags:
 
 - `id` - int64 - Primary key of the node
-- `parent_id` - int64 - ParentID column, null is root
+- `parent_id` - sql.NullInt64 - ParentID column, null is root
 - `lft` - int
 - `rgt` - int
 - `depth` - int - Depth of the node
