@@ -154,7 +154,6 @@ func moveToRightOfPosition(tx *gorm.DB, targetNode nodeItem, position, depthChan
 			affectedLte = position
 			affectedStep = targetWidth * -1
 			// move backwards should minus target covered length/width
-			// 向后移需要减去本身的宽度
 			moveStep = moveStep - targetWidth
 		} else {
 			return nil
