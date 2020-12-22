@@ -37,10 +37,9 @@ type nodeItem struct {
 
 func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err error) {
 	tx = db
-
 	stmt := &gorm.Statement{
-		DB:       db,
-		ConnPool: db.ConnPool,
+		DB:       tx,
+		ConnPool: tx.ConnPool,
 		Context:  context.Background(),
 		Clauses:  map[string]clause.Clause{},
 	}
@@ -86,6 +85,10 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 			item.ChildrenCount = int(v.Int())
 			item.DbNames["children_count"] = dbName
 			break
+		case "scope":
+			rawVal, _ := schemaField.ValueOf(sourceValue)
+			tx = tx.Where(dbName+" = ?", rawVal)
+			break
 		}
 	}
 
@@ -103,6 +106,8 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 	if err != nil {
 		return err
 	}
+
+	tx = tx.Table(targetNode.TableName)
 
 	var right, depthChange int
 	var newParentID int64
@@ -210,10 +215,10 @@ func moveTarget(tx *gorm.DB, targetNode nodeItem, targetID int64, targetIds []in
 	return tx.Where(formatSQL(":id = ?", targetNode), targetID).Update(dbNames["parent_id"], newParentID).Error
 }
 
-func moveAffected(db *gorm.DB, targetNode nodeItem, gte, lte, step int) (err error) {
+func moveAffected(tx *gorm.DB, targetNode nodeItem, gte, lte, step int) (err error) {
 	dbNames := targetNode.DbNames
 
-	return db.Where(formatSQL("(:lft BETWEEN ? AND ?) OR (:rgt BETWEEN ? AND ?)", targetNode), gte, lte, gte, lte).
+	return tx.Where(formatSQL("(:lft BETWEEN ? AND ?) OR (:rgt BETWEEN ? AND ?)", targetNode), gte, lte, gte, lte).
 		Updates(map[string]interface{}{
 			dbNames["lft"]: gorm.Expr(formatSQL("(CASE WHEN :lft >= ? THEN :lft + ? ELSE :lft END)", targetNode), gte, step),
 			dbNames["rgt"]: gorm.Expr(formatSQL("(CASE WHEN :rgt <= ? THEN :rgt + ? ELSE :rgt END)", targetNode), lte, step),

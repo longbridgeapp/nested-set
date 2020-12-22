@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm/clause"
 )
 
 func TestReloadData(t *testing.T) {
@@ -18,9 +19,11 @@ func TestNewNodeItem(t *testing.T) {
 		Depth:         2,
 		Rgt:           12,
 		Lft:           32,
+		UserType:      "User",
+		UserID:        1000,
 		ChildrenCount: 10,
 	}
-	_, node, err := parseNode(gormMock, source)
+	tx, node, err := parseNode(db, source)
 	assert.NoError(t, err)
 	assert.Equal(t, source.ID, node.ID)
 	assert.Equal(t, source.ParentID, node.ParentID)
@@ -29,6 +32,10 @@ func TestNewNodeItem(t *testing.T) {
 	assert.Equal(t, source.Rgt, node.Rgt)
 	assert.Equal(t, source.ChildrenCount, node.ChildrenCount)
 	assert.Equal(t, "categories", node.TableName)
+	stmt := tx.Statement
+	stmt.Build(clause.Where{}.Name())
+	assert.Equal(t, "WHERE user_id = $1 AND user_type = $2", stmt.SQL.String())
+
 	dbNames := node.DbNames
 	assert.Equal(t, "id", dbNames["id"])
 	assert.Equal(t, "parent_id", dbNames["parent_id"])
@@ -46,7 +53,7 @@ func TestNewNodeItem(t *testing.T) {
 		Left:       1,
 		NodesCount: 8,
 	}
-	_, node, err = parseNode(gormMock, specialItem)
+	tx, node, err = parseNode(db, specialItem)
 	assert.NoError(t, err)
 	assert.Equal(t, specialItem.ItemID, node.ID)
 	assert.Equal(t, specialItem.Pid, node.ParentID)
@@ -55,6 +62,11 @@ func TestNewNodeItem(t *testing.T) {
 	assert.Equal(t, specialItem.Left, node.Lft)
 	assert.Equal(t, specialItem.NodesCount, node.ChildrenCount)
 	assert.Equal(t, "special_items", node.TableName)
+
+	stmt = tx.Statement
+	stmt.Build(clause.Where{}.Name())
+	assert.Equal(t, "", stmt.SQL.String())
+
 	dbNames = node.DbNames
 	assert.Equal(t, "item_id", dbNames["id"])
 	assert.Equal(t, "pid", dbNames["parent_id"])
@@ -70,7 +82,6 @@ func TestNewNodeItem(t *testing.T) {
 func TestMoveToRight(t *testing.T) {
 	// case 1
 	initData()
-	db := gormMock.Table("categories")
 	MoveTo(db, dresses, jackets, MoveDirectionRight)
 	reloadCategories()
 
@@ -107,7 +118,6 @@ func TestMoveToRight(t *testing.T) {
 func TestMoveToLeft(t *testing.T) {
 	// case 1
 	initData()
-	db := gormMock.Table("categories")
 	MoveTo(db, dresses, jackets, MoveDirectionLeft)
 	reloadCategories()
 
@@ -144,7 +154,6 @@ func TestMoveToLeft(t *testing.T) {
 func TestMoveToInner(t *testing.T) {
 	// case 1
 	initData()
-	db := gormMock.Table("categories")
 	MoveTo(db, mens, blouses, MoveDirectionInner)
 	reloadCategories()
 
