@@ -41,8 +41,7 @@ type Category struct {
 	ID            int64  `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
 	Title         string
 	ParentID      int64  `nestedset:"parent_id"`
-	UserType      string `nestedset:"scope"`
-	UserID        int64  `nestedset:"scope"`
+	GroupID       int64
 	Rgt           int    `nestedset:"rgt"`
 	Lft           int    `nestedset:"lft"`
 	Depth         int    `nestedset:"depth"`
@@ -58,8 +57,27 @@ import nestedset "github.com/griffinqiu/go-nested-set"
 // nestedset.MoveDirectionLeft
 // nestedset.MoveDirectionRight
 // nestedset.MoveDirectionInner
+tx := db.Model(&Category{}).Where("group_id = ?", 100)
+nestedset.MoveTo(tx, node, to, nestedset.MoveDirectionLeft)
+```
 
-nestedset.MoveTo(gormDB, node, to, nestedset.MoveDirectionLeft)
+### Get Nodes with tree order
+
+```go
+// With scope, limit tree in a scope
+tx := db.Model(&Category{}).Where("group_id = ?", 100)
+
+// Get all nodes
+categories, _ := tx.Order("lft asc").Error
+
+// Get root nodes
+categories, _ := tx.Where("parent_id IS NULL").Order("lft asc").Error
+
+// Get childrens
+categories, _ := tx.Where("parent_id = ?", parentCategory.ID).Order("lft asc").Error
+
+// Get Left of node
+node = db.Model(&Category{}).Where()
 ```
 
 ## Testing

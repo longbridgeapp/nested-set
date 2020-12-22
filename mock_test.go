@@ -32,13 +32,12 @@ var clothing, mens, suits, slacks, jackets, womens, dresses, skirts, blouses, ev
 type Category struct {
 	ID            int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
 	Title         string
-	UserType      string `nestedset:"scope"`
-	UserID        int64  `nestedset:"scope"`
-	ParentID      int64  `nestedset:"parent_id"`
-	Rgt           int    `nestedset:"rgt"`
-	Lft           int    `nestedset:"lft"`
-	Depth         int    `nestedset:"depth"`
-	ChildrenCount int    `nestedset:"children_count"`
+	GroupID       int
+	ParentID      int64 `nestedset:"parent_id"`
+	Rgt           int   `nestedset:"rgt"`
+	Lft           int   `nestedset:"lft"`
+	Depth         int   `nestedset:"depth"`
+	ChildrenCount int   `nestedset:"children_count"`
 }
 
 type SpecialItem struct {
@@ -59,8 +58,7 @@ func findNode(query *gorm.DB, id int64) (category Category, err error) {
 var CategoryFactory = factory.NewFactory(&Category{
 	Title:    "Clothing",
 	ParentID: 0,
-	UserType: "User",
-	UserID:   int64(100),
+	GroupID:  999,
 	Rgt:      1,
 	Lft:      2,
 	Depth:    0,
@@ -110,6 +108,17 @@ func buildTestData() {
 		"Depth":         0,
 		"ChildrenCount": 2,
 	}).(*Category)
+
+	// Create a category in other group
+	_ = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
+		"Title":         "Clothing",
+		"Lft":           1,
+		"GroupID":       98,
+		"Rgt":           22,
+		"Depth":         0,
+		"ChildrenCount": 2,
+	}).(*Category)
+
 	mens = *CategoryFactory.MustCreateWithOption(map[string]interface{}{
 		"Title":         "Men's",
 		"ParentID":      clothing.ID,

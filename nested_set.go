@@ -1,11 +1,13 @@
 package nestedset
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // MoveDirection means where the node is going to be located
@@ -34,14 +36,20 @@ type nodeItem struct {
 }
 
 func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err error) {
-	tx = db.Unscoped()
-	err = tx.Statement.Parse(source)
+	tx = db
+
+	stmt := &gorm.Statement{
+		DB:       db,
+		ConnPool: db.ConnPool,
+		Context:  context.Background(),
+		Clauses:  map[string]clause.Clause{},
+	}
+
+	err = stmt.Parse(source)
 	if err != nil {
 		err = fmt.Errorf("Invalid source, must be a valid Gorm Model instance, %v", source)
 		return
 	}
-
-	stmt := tx.Statement
 
 	item = nodeItem{TableName: stmt.Table, DbNames: map[string]string{}}
 	sourceType := reflect.TypeOf(source)
@@ -77,11 +85,6 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 		case "children_count":
 			item.ChildrenCount = int(v.Int())
 			item.DbNames["children_count"] = dbName
-			break
-		case "scope":
-			if rawVal, isZero := schemaField.ValueOf(sourceValue); !isZero {
-				tx = stmt.Where(dbName+" = ?", rawVal)
-			}
 			break
 		}
 	}

@@ -19,10 +19,8 @@ func TestNewNodeItem(t *testing.T) {
 		Rgt:           12,
 		Lft:           32,
 		ChildrenCount: 10,
-		UserType:      "Group",
-		UserID:        101,
 	}
-	tx, node, err := parseNode(gormMock, source)
+	_, node, err := parseNode(gormMock, source)
 	assert.NoError(t, err)
 	assert.Equal(t, source.ID, node.ID)
 	assert.Equal(t, source.ParentID, node.ParentID)
@@ -38,7 +36,6 @@ func TestNewNodeItem(t *testing.T) {
 	assert.Equal(t, "rgt", dbNames["rgt"])
 	assert.Equal(t, "lft", dbNames["lft"])
 	assert.Equal(t, "children_count", dbNames["children_count"])
-	assert.Equal(t, 1, len(tx.Statement.Clauses))
 
 	// Test for difference column names
 	specialItem := SpecialItem{
@@ -49,7 +46,7 @@ func TestNewNodeItem(t *testing.T) {
 		Left:       1,
 		NodesCount: 8,
 	}
-	tx, node, err = parseNode(gormMock, specialItem)
+	_, node, err = parseNode(gormMock, specialItem)
 	assert.NoError(t, err)
 	assert.Equal(t, specialItem.ItemID, node.ID)
 	assert.Equal(t, specialItem.Pid, node.ParentID)
