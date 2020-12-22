@@ -41,6 +41,16 @@ type Category struct {
 	ChildrenCount int    `nestedset:"children_count"`
 }
 
+type SpecialItem struct {
+	ItemID     int64 `gorm:"PRIMARY_KEY;AUTO_INCREMENT" nestedset:"id"`
+	Title      string
+	Pid        int64 `nestedset:"parent_id"`
+	Right      int   `nestedset:"rgt"`
+	Left       int   `nestedset:"lft"`
+	Depth1     int   `nestedset:"depth"`
+	NodesCount int   `nestedset:"children_count"`
+}
+
 func findNode(query *gorm.DB, id int64) (category Category, err error) {
 	err = query.Where("id=?", id).Find(&category).Error
 	return
@@ -81,8 +91,10 @@ func newMock(_db *sql.DB) *gorm.DB {
 
 func initData() {
 	gormMock.Exec("DROP TABLE IF EXISTS categories")
+	gormMock.Exec("DROP TABLE IF EXISTS special_items")
 	err := gormMock.AutoMigrate(
 		&Category{},
+		&SpecialItem{},
 	)
 	if err != nil {
 		panic(err)

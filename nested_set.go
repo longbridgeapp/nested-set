@@ -33,15 +33,15 @@ type nodeItem struct {
 	DbNames       map[string]string
 }
 
-func newNodeItem(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err error) {
-	tx = db
-	err = db.Statement.Parse(source)
+func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err error) {
+	tx = db.Unscoped()
+	err = tx.Statement.Parse(source)
 	if err != nil {
 		err = fmt.Errorf("Invalid source, must be a valid Gorm Model instance, %v", source)
 		return
 	}
 
-	stmt := db.Statement
+	stmt := tx.Statement
 
 	item = nodeItem{TableName: stmt.Table, DbNames: map[string]string{}}
 	sourceType := reflect.TypeOf(source)
@@ -91,12 +91,12 @@ func newNodeItem(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, e
 
 // MoveTo move node to a position which is related a target node
 func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
-	tx, targetNode, err := newNodeItem(db, node)
+	tx, targetNode, err := parseNode(db, node)
 	if err != nil {
 		return err
 	}
 
-	_, toNode, err := newNodeItem(db, to)
+	_, toNode, err := parseNode(db, to)
 	if err != nil {
 		return err
 	}

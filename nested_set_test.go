@@ -22,7 +22,7 @@ func TestNewNodeItem(t *testing.T) {
 		UserType:      "Group",
 		UserID:        101,
 	}
-	tx, node, err := newNodeItem(gormMock, source)
+	tx, node, err := parseNode(gormMock, source)
 	assert.NoError(t, err)
 	assert.Equal(t, source.ID, node.ID)
 	assert.Equal(t, source.ParentID, node.ParentID)
@@ -31,7 +31,43 @@ func TestNewNodeItem(t *testing.T) {
 	assert.Equal(t, source.Rgt, node.Rgt)
 	assert.Equal(t, source.ChildrenCount, node.ChildrenCount)
 	assert.Equal(t, "categories", node.TableName)
-	// assert.Equal(t, 2, len(tx.Statement.Clauses))
+	dbNames := node.DbNames
+	assert.Equal(t, "id", dbNames["id"])
+	assert.Equal(t, "parent_id", dbNames["parent_id"])
+	assert.Equal(t, "depth", dbNames["depth"])
+	assert.Equal(t, "rgt", dbNames["rgt"])
+	assert.Equal(t, "lft", dbNames["lft"])
+	assert.Equal(t, "children_count", dbNames["children_count"])
+	assert.Equal(t, 1, len(tx.Statement.Clauses))
+
+	// Test for difference column names
+	specialItem := SpecialItem{
+		ItemID:     100,
+		Pid:        101,
+		Depth1:     2,
+		Right:      10,
+		Left:       1,
+		NodesCount: 8,
+	}
+	tx, node, err = parseNode(gormMock, specialItem)
+	assert.NoError(t, err)
+	assert.Equal(t, specialItem.ItemID, node.ID)
+	assert.Equal(t, specialItem.Pid, node.ParentID)
+	assert.Equal(t, specialItem.Depth1, node.Depth)
+	assert.Equal(t, specialItem.Right, node.Rgt)
+	assert.Equal(t, specialItem.Left, node.Lft)
+	assert.Equal(t, specialItem.NodesCount, node.ChildrenCount)
+	assert.Equal(t, "special_items", node.TableName)
+	dbNames = node.DbNames
+	assert.Equal(t, "item_id", dbNames["id"])
+	assert.Equal(t, "pid", dbNames["parent_id"])
+	assert.Equal(t, "depth1", dbNames["depth"])
+	assert.Equal(t, "right", dbNames["rgt"])
+	assert.Equal(t, "left", dbNames["lft"])
+	assert.Equal(t, "nodes_count", dbNames["children_count"])
+
+	// formatSQL test
+	assert.Equal(t, "item_id = ? AND left > right AND pid = ?, nodes_count = 1, depth1 = 0", formatSQL(":id = ? AND :lft > :rgt AND :parent_id = ?, :children_count = 1, :depth = 0", node))
 }
 
 func TestMoveToRight(t *testing.T) {
