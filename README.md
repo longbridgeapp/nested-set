@@ -4,7 +4,11 @@
 
 Go Nested Set is an implementation of the [Nested set model](https://en.wikipedia.org/wiki/Nested_set_model) for [Gorm](https://gorm.io/index.html).
 
-This is a Go version of the [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set).
+This project is the Go version of [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set), which uses the same data structure design, so it uses the same data together with [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set).
+
+> Actually the original design is for this, the content managed by [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set) in our Rails application, the front-end Go API also needs to be maintained.
+
+This is a Go version of the [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set), and it built for compatible with [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set), so you can use
 
 ## Installation
 
