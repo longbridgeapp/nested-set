@@ -96,8 +96,7 @@ func MoveTo(db *gorm.DB, node interface{}, to interface{}, direction MoveDirecti
 		right = toNode.Lft
 	}
 
-	moveToRightOfPosition(db, targetNode, right, depthChange, newParentID)
-	return nil
+	return moveToRightOfPosition(db, targetNode, right, depthChange, newParentID)
 }
 
 func moveToRightOfPosition(db *gorm.DB, targetNode nodeItem, position, depthChange int, newParentID int64) error {
