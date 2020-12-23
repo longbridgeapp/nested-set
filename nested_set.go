@@ -53,7 +53,6 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 
 	item = nodeItem{TableName: stmt.Table, DbNames: map[string]string{}}
 	sourceType := reflect.TypeOf(source)
-	fmt.Printf("sourceType:%s\n", sourceType)
 	sourceValue := reflect.Indirect(reflect.ValueOf(source))
 	for i := 0; i < sourceType.NumField(); i++ {
 		t := sourceType.Field(i)

@@ -2,7 +2,6 @@ package nestedset
 
 import (
 	"database/sql"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -189,7 +188,6 @@ func TestMoveToInner(t *testing.T) {
 }
 
 func assertNodeEqual(t *testing.T, target Category, left, right, depth, childrenCount int, parentID int64) {
-	fmt.Printf("Asserting %s(%d)\n", target.Title, target.ID)
 	nullInt64ParentID := sql.NullInt64{Valid: false}
 	if parentID > 0 {
 		nullInt64ParentID = sql.NullInt64{Valid: true, Int64: parentID}
