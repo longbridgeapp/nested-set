@@ -36,6 +36,19 @@ func TestNewNodeItem(t *testing.T) {
 	stmt.Build(clause.Where{}.Name())
 	assert.Equal(t, "WHERE user_id = $1 AND user_type = $2", stmt.SQL.String())
 
+	tx, node, err = parseNode(db, &source)
+	assert.NoError(t, err)
+	assert.Equal(t, source.ID, node.ID)
+	assert.Equal(t, source.ParentID, node.ParentID)
+	assert.Equal(t, source.Depth, node.Depth)
+	assert.Equal(t, source.Lft, node.Lft)
+	assert.Equal(t, source.Rgt, node.Rgt)
+	assert.Equal(t, source.ChildrenCount, node.ChildrenCount)
+	assert.Equal(t, "categories", node.TableName)
+	stmt = tx.Statement
+	stmt.Build(clause.Where{}.Name())
+	assert.Equal(t, "WHERE user_id = $1 AND user_type = $2", stmt.SQL.String())
+
 	dbNames := node.DbNames
 	assert.Equal(t, "id", dbNames["id"])
 	assert.Equal(t, "parent_id", dbNames["parent_id"])
