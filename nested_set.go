@@ -98,7 +98,7 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 
 // MoveTo move node to a position which is related a target node
 func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
-	tx, targetNode, err := parseNode(db, node)
+	_, targetNode, err := parseNode(db, node)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 		return err
 	}
 
-	tx = tx.Table(targetNode.TableName)
+	tx := db.Table(targetNode.TableName)
 
 	var right, depthChange int
 	var newParentID sql.NullInt64
@@ -137,7 +137,7 @@ func moveToRightOfPosition(tx *gorm.DB, targetNode nodeItem, position, depthChan
 		targetWidth := targetRight - targetLeft + 1
 
 		targetIds := []int64{}
-		err = tx.Where(formatSQL(":rgt >= ? AND :rgt <= ?", targetNode), targetLeft, targetRight).Pluck("id", &targetIds).Error
+		err = tx.Where(formatSQL(":lft >= ? AND :rgt <= ?", targetNode), targetLeft, targetRight).Pluck("id", &targetIds).Error
 		if err != nil {
 			return
 		}
