@@ -92,6 +92,30 @@ func TestNewNodeItem(t *testing.T) {
 	assert.Equal(t, "item_id = ? AND left > right AND pid = ?, nodes_count = 1, depth1 = 0", formatSQL(":id = ? AND :lft > :rgt AND :parent_id = ?, :children_count = 1, :depth = 0", node))
 }
 
+func TestCreateSource(t *testing.T) {
+	initData()
+
+	c1 := Category{Title: "c1s"}
+	Create(db, &c1, nil)
+	assert.Equal(t, c1.Lft, 1)
+	assert.Equal(t, c1.Rgt, 2)
+
+	c2 := Category{Title: "c2s", UserType: "user"}
+	Create(db, &c2, nil)
+	assert.Equal(t, c2.Lft, 1)
+	assert.Equal(t, c2.Rgt, 2)
+
+	c3 := Category{Title: "c3s", UserType: "user"}
+	Create(db, &c3, nil)
+	assert.Equal(t, c3.Lft, 3)
+	assert.Equal(t, c3.Rgt, 4)
+
+	c4 := Category{Title: "c4s", UserType: "user"}
+	Create(db, &c4, &c2)
+	assert.Equal(t, c4.Lft, 2)
+	assert.Equal(t, c4.Rgt, 3)
+}
+
 func TestMoveToRight(t *testing.T) {
 	// case 1
 	initData()

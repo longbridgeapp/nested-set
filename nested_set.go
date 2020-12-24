@@ -96,9 +96,97 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 	return
 }
 
+// Create a new node by parent
+func Create(db *gorm.DB, source, parent interface{}) error {
+	return db.Transaction(func(db *gorm.DB) (err error) {
+		tx, targetNode, err := parseNode(db, source)
+		if err != nil {
+			return err
+		}
+
+		// for totally blank table / scope default init root would be [1 - 2]
+		setToLft := 1
+		setToRgt := 2
+		setDepth := 0
+
+		// put node into root level when parent is nil
+		if parent == nil {
+			lastOne := make(map[string]interface{})
+			result := tx.Model(source).Select(targetNode.DbNames["rgt"]).Order(formatSQL(":rgt desc", targetNode)).First(&lastOne)
+			if result.Error == nil {
+				setToLft = lastOne[targetNode.DbNames["rgt"]].(int) + 1
+				setToRgt = setToLft + 1
+			}
+		} else {
+			_, parentNode, err := parseNode(db, parent)
+			if err != nil {
+				return err
+			}
+
+			setToLft = parentNode.Rgt
+			setToRgt = parentNode.Rgt + 1
+			setDepth = parentNode.Depth + 1
+
+			dbNames := targetNode.DbNames
+
+			// UPDATE tree SET rgt = rgt + 2 WHERE rgt >= new_lft;
+			updateErr := tx.Table(targetNode.TableName).Where(
+				formatSQL(":rgt >= ?", targetNode), setToLft,
+			).UpdateColumn(
+				dbNames["rgt"], gorm.Expr(formatSQL(":rgt + 2", targetNode)),
+			).Error
+
+			if updateErr != nil {
+				return updateErr
+			}
+
+			// UPDATE tree SET lft = lft + 2 WHERE lft > new_lft;
+			updateErr = tx.Table(targetNode.TableName).Where(
+				formatSQL(":lft > ?", targetNode), setToLft,
+			).UpdateColumn(
+				dbNames["lft"], gorm.Expr(formatSQL(":lft + 2", targetNode)),
+			).Error
+			if updateErr != nil {
+				return updateErr
+			}
+
+			// UPDATE tree SET children_count = children_count + 1 WHERE is = parent.id;
+			updateErr = db.Model(parent).Update(
+				dbNames["children_count"], gorm.Expr(formatSQL(":children_count + 1", targetNode)),
+			).Error
+			if updateErr != nil {
+				return updateErr
+			}
+		}
+
+		sourceValue := reflect.Indirect(reflect.ValueOf(source))
+		sourceType := sourceValue.Type()
+		for i := 0; i < sourceType.NumField(); i++ {
+			t := sourceType.Field(i)
+			switch t.Tag.Get("nestedset") {
+			case "lft":
+				f := sourceValue.FieldByName(t.Name)
+				f.SetInt(int64(setToLft))
+				break
+			case "rgt":
+				f := sourceValue.FieldByName(t.Name)
+				f.SetInt(int64(setToRgt))
+				break
+			case "depth":
+				f := sourceValue.FieldByName(t.Name)
+				f.SetInt(int64(setDepth))
+				break
+			}
+		}
+
+		// skip the table & scope, since they should be all setup by caller
+		return db.Create(source).Error
+	})
+}
+
 // MoveTo move node to a position which is related a target node
 func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
-	_, targetNode, err := parseNode(db, node)
+	tx, targetNode, err := parseNode(db, node)
 	if err != nil {
 		return err
 	}
@@ -108,7 +196,7 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 		return err
 	}
 
-	tx := db.Table(targetNode.TableName)
+	tx = db.Table(targetNode.TableName)
 
 	var right, depthChange int
 	var newParentID sql.NullInt64
@@ -174,6 +262,7 @@ func moveToRightOfPosition(tx *gorm.DB, targetNode nodeItem, position, depthChan
 
 func syncChildrenCount(tx *gorm.DB, targetNode nodeItem, oldParentID, newParentID sql.NullInt64) (err error) {
 	var oldParentCount, newParentCount int64
+
 	if oldParentID.Valid {
 		err = tx.Where(formatSQL(":parent_id = ?", targetNode), oldParentID).Count(&oldParentCount).Error
 		if err != nil {
@@ -195,6 +284,7 @@ func syncChildrenCount(tx *gorm.DB, targetNode nodeItem, oldParentID, newParentI
 			return
 		}
 	}
+
 	return nil
 }
 
@@ -212,6 +302,7 @@ func moveTarget(tx *gorm.DB, targetNode nodeItem, targetID int64, targetIds []in
 			return
 		}
 	}
+
 	return tx.Where(formatSQL(":id = ?", targetNode), targetID).Update(dbNames["parent_id"], newParentID).Error
 }
 
