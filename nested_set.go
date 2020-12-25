@@ -103,6 +103,13 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 // ```nestedset.Create(db, &Category{...}, &parent)``` will create a new category under parent node as its last child
 func Create(db *gorm.DB, source, parent interface{}) error {
 	return db.Transaction(func(db *gorm.DB) (err error) {
+		// lock table
+		lockRst := make(map[string]interface{}, 0)
+		err = db.Model(source).Clauses(clause.Locking{Strength: "UPDATE"}).Find(&lockRst).Error
+		if err != nil {
+			return nil
+		}
+
 		tx, target, err := parseNode(db, source)
 		if err != nil {
 			return err
