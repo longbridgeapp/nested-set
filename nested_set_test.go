@@ -139,7 +139,7 @@ func TestDeleteSource(t *testing.T) {
 	cp := Category{Title: "cp"}
 	Create(db, &cp, c1)
 
-	c2 := Category{Title: "c2"}
+	c2 := Category{Title: "c2s"}
 	Create(db, &c2, nil)
 
 	db.First(&c1)

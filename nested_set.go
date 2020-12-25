@@ -187,8 +187,12 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 // Delete a node from scoped list and its all descendent
 // ```nestedset.Delete(db, &Category{...})```
 func Delete(db *gorm.DB, source interface{}) error {
-	return db.Transaction(func(tx *gorm.DB) (err error) {
-		tx.Model(source).Clauses(clause.Locking{Strength: "UPDATE"})
+	return db.Transaction(func(db *gorm.DB) (err error) {
+		// lock table
+		err = db.Model(source).Clauses(clause.Locking{Strength: "UPDATE"}).Find(source).Error
+		if err != nil {
+			return nil
+		}
 
 		// load node from locked DB to avoid override
 		rst := db.First(source)
@@ -196,14 +200,14 @@ func Delete(db *gorm.DB, source interface{}) error {
 			return rst.Error
 		}
 
-		tx, target, err := parseNode(tx, source)
+		tx, target, err := parseNode(db, source)
 		if err != nil {
 			return err
 		}
 
-		tableName, dbNames := target.TableName, target.DbNames
 		// Batch Delete Method in GORM requires an instance of current source type without ID
 		// to avoid GORM style Delete interface, we hacked here by set source ID to 0
+		tableName, dbNames := target.TableName, target.DbNames
 		v := reflect.Indirect(reflect.ValueOf(source))
 		t := v.Type()
 		for i := 0; i < t.NumField(); i++ {
@@ -214,8 +218,6 @@ func Delete(db *gorm.DB, source interface{}) error {
 				break
 			}
 		}
-
-		tx, _, _ = parseNode(tx, source)
 		err = tx.
 			Where(formatSQL(":lft >= ? AND :rgt <= ?", target), target.Lft, target.Rgt).
 			Delete(source).Error
@@ -227,6 +229,7 @@ func Delete(db *gorm.DB, source interface{}) error {
 		// UPDATE tree SET lft = lft - width WHERE lft > target_rgt;
 		width := target.Rgt - target.Lft + 1
 		for _, d := range []string{"rgt", "lft"} {
+			// recreate db session for get rid of previous clauses
 			tx, _, _ = parseNode(db, source)
 			err = tx.Table(tableName).
 				Where(formatSQL(":"+d+" > ?", target), target.Rgt).
