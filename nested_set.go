@@ -36,6 +36,8 @@ type nodeItem struct {
 	DbNames       map[string]string
 }
 
+// parseNode parse a gorm structure into an internal source structure
+// for bring in all required data attribute like scope, left, righ etc.
 func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err error) {
 	tx = db
 	stmt := &gorm.Statement{
@@ -96,84 +98,82 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 	return
 }
 
-// Create a new node by parent
+// Create a new node by parent with Gorm original Create()
+// ```nestedset.Create(db, &Category{...}, nil)```` will create a new category in root level
+// ```nestedset.Create(db, &Category{...}, &parent)``` will create a new category under parent node as its last child
 func Create(db *gorm.DB, source, parent interface{}) error {
 	return db.Transaction(func(db *gorm.DB) (err error) {
-		tx, targetNode, err := parseNode(db, source)
+		tx, target, err := parseNode(db, source)
 		if err != nil {
 			return err
 		}
 
 		// for totally blank table / scope default init root would be [1 - 2]
-		setToLft := 1
-		setToRgt := 2
-		setDepth := 0
+		setDepth, setToLft, setToRgt := 0, 1, 2
+		tableName, dbNames := target.TableName, target.DbNames
 
 		// put node into root level when parent is nil
 		if parent == nil {
-			lastOne := make(map[string]interface{})
-			result := tx.Model(source).Select(targetNode.DbNames["rgt"]).Order(formatSQL(":rgt desc", targetNode)).First(&lastOne)
-			if result.Error == nil {
-				setToLft = lastOne[targetNode.DbNames["rgt"]].(int) + 1
+			lastNode := make(map[string]interface{})
+			orderSQL := formatSQL(":rgt desc", target)
+			rst := tx.Model(source).Select(dbNames["rgt"]).Order(orderSQL).First(&lastNode)
+			if rst.Error == nil {
+				setToLft = lastNode[dbNames["rgt"]].(int) + 1
 				setToRgt = setToLft + 1
 			}
 		} else {
-			_, parentNode, err := parseNode(db, parent)
+			_, targetParent, err := parseNode(db, parent)
 			if err != nil {
 				return err
 			}
 
-			setToLft = parentNode.Rgt
-			setToRgt = parentNode.Rgt + 1
-			setDepth = parentNode.Depth + 1
-
-			dbNames := targetNode.DbNames
+			setToLft = targetParent.Rgt
+			setToRgt = targetParent.Rgt + 1
+			setDepth = targetParent.Depth + 1
 
 			// UPDATE tree SET rgt = rgt + 2 WHERE rgt >= new_lft;
-			updateErr := tx.Table(targetNode.TableName).Where(
-				formatSQL(":rgt >= ?", targetNode), setToLft,
-			).UpdateColumn(
-				dbNames["rgt"], gorm.Expr(formatSQL(":rgt + 2", targetNode)),
-			).Error
-
-			if updateErr != nil {
-				return updateErr
+			err = tx.Table(tableName).
+				Where(formatSQL(":rgt >= ?", target), setToLft).
+				UpdateColumn(dbNames["rgt"], gorm.Expr(formatSQL(":rgt + 2", target))).
+				Error
+			if err != nil {
+				return err
 			}
 
 			// UPDATE tree SET lft = lft + 2 WHERE lft > new_lft;
-			updateErr = tx.Table(targetNode.TableName).Where(
-				formatSQL(":lft > ?", targetNode), setToLft,
-			).UpdateColumn(
-				dbNames["lft"], gorm.Expr(formatSQL(":lft + 2", targetNode)),
-			).Error
-			if updateErr != nil {
-				return updateErr
+			err = tx.Table(tableName).
+				Where(formatSQL(":lft > ?", target), setToLft).
+				UpdateColumn(dbNames["lft"], gorm.Expr(formatSQL(":lft + 2", target))).
+				Error
+			if err != nil {
+				return err
 			}
 
 			// UPDATE tree SET children_count = children_count + 1 WHERE is = parent.id;
-			updateErr = db.Model(parent).Update(
-				dbNames["children_count"], gorm.Expr(formatSQL(":children_count + 1", targetNode)),
+			err = db.Model(parent).Update(
+				dbNames["children_count"], gorm.Expr(formatSQL(":children_count + 1", target)),
 			).Error
-			if updateErr != nil {
-				return updateErr
+			if err != nil {
+				return err
 			}
 		}
 
-		sourceValue := reflect.Indirect(reflect.ValueOf(source))
-		sourceType := sourceValue.Type()
-		for i := 0; i < sourceType.NumField(); i++ {
-			t := sourceType.Field(i)
-			switch t.Tag.Get("nestedset") {
+		// Set Lft, Rgt, Depth dynamically by refect
+		v := reflect.Indirect(reflect.ValueOf(source))
+		t := v.Type()
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			switch f.Tag.Get("nestedset") {
 			case "lft":
-				f := sourceValue.FieldByName(t.Name)
+				f := v.FieldByName(f.Name)
 				f.SetInt(int64(setToLft))
 				break
 			case "rgt":
-				f := sourceValue.FieldByName(t.Name)
+				f := v.FieldByName(f.Name)
 				f.SetInt(int64(setToRgt))
 				break
 			case "depth":
-				f := sourceValue.FieldByName(t.Name)
+				f := v.FieldByName(f.Name)
 				f.SetInt(int64(setDepth))
 				break
 			}
@@ -185,6 +185,7 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 }
 
 // MoveTo move node to a position which is related a target node
+// ```nestedset.MoveTo(db, &node, &to, nestedset.MoveDirectionInner)``` will move [&node] to [&to] node's child_list as its first child
 func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 	tx, targetNode, err := parseNode(db, node)
 	if err != nil {
