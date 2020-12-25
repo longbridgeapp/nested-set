@@ -92,6 +92,44 @@ func TestNewNodeItem(t *testing.T) {
 	assert.Equal(t, "item_id = ? AND left > right AND pid = ?, nodes_count = 1, depth1 = 0", formatSQL(":id = ? AND :lft > :rgt AND :parent_id = ?, :children_count = 1, :depth = 0", node))
 }
 
+func TestCreateSource(t *testing.T) {
+	initData()
+
+	c1 := Category{Title: "c1s"}
+	Create(db, &c1, nil)
+	assert.Equal(t, c1.Lft, 1)
+	assert.Equal(t, c1.Rgt, 2)
+	assert.Equal(t, c1.Depth, 0)
+
+	cp := Category{Title: "cps"}
+	Create(db, &cp, nil)
+	assert.Equal(t, cp.Lft, 3)
+	assert.Equal(t, cp.Rgt, 4)
+
+	c2 := Category{Title: "c2s", UserType: "ux"}
+	Create(db, &c2, nil)
+	assert.Equal(t, c2.Lft, 1)
+	assert.Equal(t, c2.Rgt, 2)
+
+	c3 := Category{Title: "c3s", UserType: "ux"}
+	Create(db, &c3, nil)
+	assert.Equal(t, c3.Lft, 3)
+	assert.Equal(t, c3.Rgt, 4)
+
+	c4 := Category{Title: "c4s", UserType: "ux"}
+	Create(db, &c4, &c2)
+	assert.Equal(t, c4.Lft, 2)
+	assert.Equal(t, c4.Rgt, 3)
+	assert.Equal(t, c4.Depth, 1)
+
+	// after insert a new node into c2
+	db.Find(&c3)
+	db.Find(&c2)
+	assert.Equal(t, c3.Lft, 5)
+	assert.Equal(t, c3.Rgt, 6)
+	assert.Equal(t, c2.ChildrenCount, 1)
+}
+
 func TestMoveToRight(t *testing.T) {
 	// case 1
 	initData()
