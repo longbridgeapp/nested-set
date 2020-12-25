@@ -8,7 +8,15 @@ This project is the Go version of [awesome_nested_set](https://github.com/collec
 
 > Actually the original design is for this, the content managed by [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set) in our Rails application, the front-end Go API also needs to be maintained.
 
-This is a Go version of the [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set), and it built for compatible with [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set), so you can use
+This is a Go version of the [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set), and it built for compatible with [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set).
+
+## What Go Nested Set can do?
+
+For manage a nested tree node like this:
+
+![Showcase](https://user-images.githubusercontent.com/5518/103117256-8717d900-46a4-11eb-9079-743051b59104.gif)
+
+> Video taken from [BlueDoc](https://github.com/huacnlee/bluedoc), used by awesome_nested_set + [react-dnd](https://react-dnd.github.io/react-dnd/examples/sortable/simple).
 
 ## Installation
 
