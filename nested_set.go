@@ -147,6 +147,7 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 				return err
 			}
 
+			tx, _, _ := parseNode(db, source)
 			// UPDATE tree SET lft = lft + 2 WHERE lft > new_lft;
 			err = tx.Table(tableName).
 				Where(formatSQL(":lft > ?", target), setToLft).
