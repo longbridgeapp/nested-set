@@ -130,6 +130,26 @@ func TestCreateSource(t *testing.T) {
 	assert.Equal(t, c2.ChildrenCount, 1)
 }
 
+func TestDeleteSource(t *testing.T) {
+	initData()
+
+	c1 := Category{Title: "c1s"}
+	Create(db, &c1, nil)
+
+	cp := Category{Title: "cp"}
+	Create(db, &cp, c1)
+
+	c2 := Category{Title: "c2"}
+	Create(db, &c2, nil)
+
+	db.First(&c1)
+	Delete(db, &c1)
+
+	db.Model(&c2).First(&c2)
+	assert.Equal(t, c2.Lft, 1)
+	assert.Equal(t, c2.Rgt, 2)
+}
+
 func TestMoveToRight(t *testing.T) {
 	// case 1
 	initData()
