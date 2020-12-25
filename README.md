@@ -62,6 +62,12 @@ type Category struct {
 ```go
 import nestedset "github.com/griffinqiu/go-nested-set"
 
+// create a new node root level last child
+nestedset.Create(tx, &node, nil)
+
+// create a new node as parent first child
+nestedset.Create(tx, &node, &parent)
+
 // nestedset.MoveDirectionLeft
 // nestedset.MoveDirectionRight
 // nestedset.MoveDirectionInner
