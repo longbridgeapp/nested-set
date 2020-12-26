@@ -202,7 +202,7 @@ func Delete(db *gorm.DB, source interface{}) error {
 
 		// Batch Delete Method in GORM requires an instance of current source type without ID
 		// to avoid GORM style Delete interface, we hacked here by set source ID to 0
-		tableName, dbNames := target.TableName, target.DbNames
+		dbNames := target.DbNames
 		v := reflect.Indirect(reflect.ValueOf(source))
 		t := v.Type()
 		for i := 0; i < t.NumField(); i++ {
@@ -213,7 +213,7 @@ func Delete(db *gorm.DB, source interface{}) error {
 				break
 			}
 		}
-		err = tx.
+		err = tx.Model(source).
 			Where(formatSQL(":lft >= ? AND :rgt <= ?", target), target.Lft, target.Rgt).
 			Delete(source).Error
 		if err != nil {
@@ -226,7 +226,7 @@ func Delete(db *gorm.DB, source interface{}) error {
 		for _, d := range []string{"rgt", "lft"} {
 			// recreate db session for get rid of previous clauses
 			tx, _, _ = parseNode(db, source)
-			err = tx.Table(tableName).
+			err = tx.Model(source).
 				Where(formatSQL(":"+d+" > ?", target), target.Rgt).
 				Update(dbNames[d], gorm.Expr(formatSQL(":"+d+" - ?", target), width)).
 				Error
@@ -252,7 +252,7 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 		return err
 	}
 
-	tx = db.Table(targetNode.TableName)
+	tx = tx.Table(targetNode.TableName)
 
 	var right, depthChange int
 	var newParentID sql.NullInt64
