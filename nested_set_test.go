@@ -49,13 +49,13 @@ func TestNewNodeItem(t *testing.T) {
 	stmt.Build(clause.Where{}.Name())
 	assert.Equal(t, "WHERE user_id = $1 AND user_type = $2", stmt.SQL.String())
 
-	columnMap := node.ColumnMap
-	assert.Equal(t, "id", columnMap["id"])
-	assert.Equal(t, "parent_id", columnMap["parent_id"])
-	assert.Equal(t, "depth", columnMap["depth"])
-	assert.Equal(t, "rgt", columnMap["rgt"])
-	assert.Equal(t, "lft", columnMap["lft"])
-	assert.Equal(t, "children_count", columnMap["children_count"])
+	dbNames := node.DbNames
+	assert.Equal(t, "id", dbNames["id"])
+	assert.Equal(t, "parent_id", dbNames["parent_id"])
+	assert.Equal(t, "depth", dbNames["depth"])
+	assert.Equal(t, "rgt", dbNames["rgt"])
+	assert.Equal(t, "lft", dbNames["lft"])
+	assert.Equal(t, "children_count", dbNames["children_count"])
 
 	// Test for difference column names
 	specialItem := SpecialItem{
@@ -80,13 +80,13 @@ func TestNewNodeItem(t *testing.T) {
 	stmt.Build(clause.Where{}.Name())
 	assert.Equal(t, "", stmt.SQL.String())
 
-	columnMap = node.ColumnMap
-	assert.Equal(t, "item_id", columnMap["id"])
-	assert.Equal(t, "pid", columnMap["parent_id"])
-	assert.Equal(t, "depth1", columnMap["depth"])
-	assert.Equal(t, "right", columnMap["rgt"])
-	assert.Equal(t, "left", columnMap["lft"])
-	assert.Equal(t, "nodes_count", columnMap["children_count"])
+	dbNames = node.DbNames
+	assert.Equal(t, "item_id", dbNames["id"])
+	assert.Equal(t, "pid", dbNames["parent_id"])
+	assert.Equal(t, "depth1", dbNames["depth"])
+	assert.Equal(t, "right", dbNames["rgt"])
+	assert.Equal(t, "left", dbNames["lft"])
+	assert.Equal(t, "nodes_count", dbNames["children_count"])
 
 	// formatSQL test
 	assert.Equal(t, "item_id = ? AND left > right AND pid = ?, nodes_count = 1, depth1 = 0", formatSQL(":id = ? AND :lft > :rgt AND :parent_id = ?, :children_count = 1, :depth = 0", node))

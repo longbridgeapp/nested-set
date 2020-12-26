@@ -33,7 +33,7 @@ type nodeItem struct {
 	Lft           int
 	ChildrenCount int
 	TableName     string
-	ColumnMap     map[string]string
+	DbNames       map[string]string
 }
 
 // parseNode parse a gorm structure into an internal source structure
@@ -53,7 +53,7 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 		return
 	}
 
-	item = nodeItem{TableName: stmt.Table, ColumnMap: map[string]string{}}
+	item = nodeItem{TableName: stmt.Table, DbNames: map[string]string{}}
 	sourceValue := reflect.Indirect(reflect.ValueOf(source))
 	sourceType := sourceValue.Type()
 	for i := 0; i < sourceType.NumField(); i++ {
@@ -66,27 +66,27 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nodeItem, err
 		switch t.Tag.Get("nestedset") {
 		case "id":
 			item.ID = v.Int()
-			item.ColumnMap["id"] = dbName
+			item.DbNames["id"] = dbName
 			break
 		case "parent_id":
 			item.ParentID = v.Interface().(sql.NullInt64)
-			item.ColumnMap["parent_id"] = dbName
+			item.DbNames["parent_id"] = dbName
 			break
 		case "depth":
 			item.Depth = int(v.Int())
-			item.ColumnMap["depth"] = dbName
+			item.DbNames["depth"] = dbName
 			break
 		case "rgt":
 			item.Rgt = int(v.Int())
-			item.ColumnMap["rgt"] = dbName
+			item.DbNames["rgt"] = dbName
 			break
 		case "lft":
 			item.Lft = int(v.Int())
-			item.ColumnMap["lft"] = dbName
+			item.DbNames["lft"] = dbName
 			break
 		case "children_count":
 			item.ChildrenCount = int(v.Int())
-			item.ColumnMap["children_count"] = dbName
+			item.DbNames["children_count"] = dbName
 			break
 		case "scope":
 			rawVal, _ := schemaField.ValueOf(sourceValue)
@@ -110,15 +110,15 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 
 		// for totally blank table / scope default init root would be [1 - 2]
 		setDepth, setToLft, setToRgt := 0, 1, 2
-		tableName, ColumnMap := target.TableName, target.ColumnMap
+		tableName, dbNames := target.TableName, target.DbNames
 
 		// put node into root level when parent is nil
 		if parent == nil {
 			lastNode := make(map[string]interface{})
 			orderSQL := formatSQL(":rgt desc", target)
-			rst := tx.Model(source).Select(ColumnMap["rgt"]).Order(orderSQL).First(&lastNode)
+			rst := tx.Model(source).Select(dbNames["rgt"]).Order(orderSQL).First(&lastNode)
 			if rst.Error == nil {
-				setToLft = lastNode[ColumnMap["rgt"]].(int) + 1
+				setToLft = lastNode[dbNames["rgt"]].(int) + 1
 				setToRgt = setToLft + 1
 			}
 		} else {
@@ -134,7 +134,7 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 			// UPDATE tree SET rgt = rgt + 2 WHERE rgt >= new_lft;
 			err = tx.Table(tableName).
 				Where(formatSQL(":rgt >= ?", target), setToLft).
-				UpdateColumn(ColumnMap["rgt"], gorm.Expr(formatSQL(":rgt + 2", target))).
+				UpdateColumn(dbNames["rgt"], gorm.Expr(formatSQL(":rgt + 2", target))).
 				Error
 			if err != nil {
 				return err
@@ -144,7 +144,7 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 			// UPDATE tree SET lft = lft + 2 WHERE lft > new_lft;
 			err = tx.Table(tableName).
 				Where(formatSQL(":lft > ?", target), setToLft).
-				UpdateColumn(ColumnMap["lft"], gorm.Expr(formatSQL(":lft + 2", target))).
+				UpdateColumn(dbNames["lft"], gorm.Expr(formatSQL(":lft + 2", target))).
 				Error
 			if err != nil {
 				return err
@@ -152,7 +152,7 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 
 			// UPDATE tree SET children_count = children_count + 1 WHERE id = parent.id;
 			err = db.Model(parent).Update(
-				ColumnMap["children_count"], gorm.Expr(formatSQL(":children_count + 1", target)),
+				dbNames["children_count"], gorm.Expr(formatSQL(":children_count + 1", target)),
 			).Error
 			if err != nil {
 				return err
@@ -202,7 +202,7 @@ func Delete(db *gorm.DB, source interface{}) error {
 
 		// Batch Delete Method in GORM requires an instance of current source type without ID
 		// to avoid GORM style Delete interface, we hacked here by set source ID to 0
-		tableName, ColumeMap := target.TableName, target.ColumnMap
+		tableName, dbNames := target.TableName, target.DbNames
 		v := reflect.Indirect(reflect.ValueOf(source))
 		t := v.Type()
 		for i := 0; i < t.NumField(); i++ {
@@ -228,7 +228,7 @@ func Delete(db *gorm.DB, source interface{}) error {
 			tx, _, _ = parseNode(db, source)
 			err = tx.Table(tableName).
 				Where(formatSQL(":"+d+" > ?", target), target.Rgt).
-				Update(ColumeMap[d], gorm.Expr(formatSQL(":"+d+" - ?", target), width)).
+				Update(dbNames[d], gorm.Expr(formatSQL(":"+d+" - ?", target), width)).
 				Error
 			if err != nil {
 				return err
@@ -324,7 +324,7 @@ func syncChildrenCount(tx *gorm.DB, targetNode nodeItem, oldParentID, newParentI
 		if err != nil {
 			return
 		}
-		err = tx.Where(formatSQL(":id = ?", targetNode), oldParentID).Update(targetNode.ColumnMap["children_count"], oldParentCount).Error
+		err = tx.Where(formatSQL(":id = ?", targetNode), oldParentID).Update(targetNode.DbNames["children_count"], oldParentCount).Error
 		if err != nil {
 			return
 		}
@@ -335,7 +335,7 @@ func syncChildrenCount(tx *gorm.DB, targetNode nodeItem, oldParentID, newParentI
 		if err != nil {
 			return
 		}
-		err = tx.Where(formatSQL(":id = ?", targetNode), newParentID).Update(targetNode.ColumnMap["children_count"], newParentCount).Error
+		err = tx.Where(formatSQL(":id = ?", targetNode), newParentID).Update(targetNode.DbNames["children_count"], newParentCount).Error
 		if err != nil {
 			return
 		}
@@ -345,30 +345,30 @@ func syncChildrenCount(tx *gorm.DB, targetNode nodeItem, oldParentID, newParentI
 }
 
 func moveTarget(tx *gorm.DB, targetNode nodeItem, targetID int64, targetIds []int64, step, depthChange int, newParentID sql.NullInt64) (err error) {
-	cm := targetNode.ColumnMap
+	dbNames := targetNode.DbNames
 
 	if len(targetIds) > 0 {
 		err = tx.Where(formatSQL(":id IN (?)", targetNode), targetIds).
 			Updates(map[string]interface{}{
-				cm["lft"]:   gorm.Expr(formatSQL(":lft + ?", targetNode), step),
-				cm["rgt"]:   gorm.Expr(formatSQL(":rgt + ?", targetNode), step),
-				cm["depth"]: gorm.Expr(formatSQL(":depth + ?", targetNode), depthChange),
+				dbNames["lft"]:   gorm.Expr(formatSQL(":lft + ?", targetNode), step),
+				dbNames["rgt"]:   gorm.Expr(formatSQL(":rgt + ?", targetNode), step),
+				dbNames["depth"]: gorm.Expr(formatSQL(":depth + ?", targetNode), depthChange),
 			}).Error
 		if err != nil {
 			return
 		}
 	}
 
-	return tx.Where(formatSQL(":id = ?", targetNode), targetID).Update(cm["parent_id"], newParentID).Error
+	return tx.Where(formatSQL(":id = ?", targetNode), targetID).Update(dbNames["parent_id"], newParentID).Error
 }
 
 func moveAffected(tx *gorm.DB, targetNode nodeItem, gte, lte, step int) (err error) {
-	cm := targetNode.ColumnMap
+	dbNames := targetNode.DbNames
 
 	return tx.Where(formatSQL("(:lft BETWEEN ? AND ?) OR (:rgt BETWEEN ? AND ?)", targetNode), gte, lte, gte, lte).
 		Updates(map[string]interface{}{
-			cm["lft"]: gorm.Expr(formatSQL("(CASE WHEN :lft >= ? THEN :lft + ? ELSE :lft END)", targetNode), gte, step),
-			cm["rgt"]: gorm.Expr(formatSQL("(CASE WHEN :rgt <= ? THEN :rgt + ? ELSE :rgt END)", targetNode), lte, step),
+			dbNames["lft"]: gorm.Expr(formatSQL("(CASE WHEN :lft >= ? THEN :lft + ? ELSE :lft END)", targetNode), gte, step),
+			dbNames["rgt"]: gorm.Expr(formatSQL("(CASE WHEN :rgt <= ? THEN :rgt + ? ELSE :rgt END)", targetNode), lte, step),
 		}).Error
 }
 
@@ -376,7 +376,7 @@ func formatSQL(placeHolderSQL string, node nodeItem) (out string) {
 	out = placeHolderSQL
 
 	out = strings.ReplaceAll(out, ":table_name", node.TableName)
-	for k, v := range node.ColumnMap {
+	for k, v := range node.DbNames {
 		out = strings.Replace(out, ":"+k, v, -1)
 	}
 
