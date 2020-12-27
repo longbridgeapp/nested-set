@@ -102,14 +102,14 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 	}
 
 	// for totally blank table / scope default init root would be [1 - 2]
-	var setToDepth, setToLft, setToRgt = 0, 1, 2
+	setToDepth, setToLft, setToRgt := 0, 1, 2
 	dbNames := target.DbNames
 
 	return tx.Transaction(func(tx *gorm.DB) (err error) {
 		// create node in root level when parent is nil
 		if parent == nil {
 			lastNode := make(map[string]interface{})
-			rst := tx.Select(dbNames["rgt"]).Order(formatSQL(":rgt desc", target)).Take(&lastNode)
+			rst := tx.Select(dbNames["rgt"]).Order(formatSQL(":rgt DESC", target)).Take(&lastNode)
 			if rst.Error == nil {
 				setToLft = int(lastNode[dbNames["rgt"]].(int64) + 1)
 				setToRgt = setToLft + 1
@@ -140,8 +140,7 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 
 			// UPDATE tree SET children_count = children_count + 1 WHERE id = parent.id;
 			err = tx.Model(parent).Update(
-				dbNames["children_count"], gorm.Expr(formatSQL(":children_count + 1", target)),
-			).Error
+				dbNames["children_count"], gorm.Expr(formatSQL(":children_count + 1", target))).Error
 			if err != nil {
 				return err
 			}
@@ -196,8 +195,7 @@ func Delete(db *gorm.DB, source interface{}) error {
 	}
 
 	return tx.Transaction(func(tx *gorm.DB) (err error) {
-		err = tx.Model(source).
-			Where(formatSQL(":lft >= ? AND :rgt <= ?", target), target.Lft, target.Rgt).
+		err = tx.Where(formatSQL(":lft >= ? AND :rgt <= ?", target), target.Lft, target.Rgt).
 			Delete(source).Error
 		if err != nil {
 			return err
@@ -207,8 +205,7 @@ func Delete(db *gorm.DB, source interface{}) error {
 		// UPDATE tree SET lft = lft - width WHERE lft > target_rgt;
 		width := target.Rgt - target.Lft + 1
 		for _, d := range []string{"rgt", "lft"} {
-			err = tx.Model(source).
-				Where(formatSQL(":"+d+" > ?", target), target.Rgt).
+			err = tx.Where(formatSQL(":"+d+" > ?", target), target.Rgt).
 				Update(dbNames[d], gorm.Expr(formatSQL(":"+d+" - ?", target), width)).
 				Error
 			if err != nil {
@@ -232,8 +229,6 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 	if err != nil {
 		return err
 	}
-
-	tx = tx.Table(targetNode.TableName)
 
 	var right, depthChange int
 	var newParentID sql.NullInt64
