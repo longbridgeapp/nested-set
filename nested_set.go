@@ -25,20 +25,15 @@ const (
 	MoveDirectionInner MoveDirection = 0
 )
 
-// NestedModel includes a list of default attributes
-type NestedModel struct {
+type nestedItem struct {
 	ID            int64
 	ParentID      sql.NullInt64
 	Depth         int
 	Rgt           int
 	Lft           int
 	ChildrenCount int
-}
-
-type nestedItem struct {
-	NestedModel
-	TableName string
-	DbNames   map[string]string
+	TableName     string
+	DbNames       map[string]string
 }
 
 // parseNode parse a gorm struct into an internal nested item struct
