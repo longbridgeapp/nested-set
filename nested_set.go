@@ -167,8 +167,7 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 			}
 		}
 
-		// skip the table & scope, since they should be all setup by caller
-		return db.Create(source).Error
+		return tx.Create(source).Error
 	})
 }
 
