@@ -105,6 +105,16 @@ $ createdb nested-set-test
 $ go test ./...
 ```
 
+```SQL
+-- some useful sql to check status
+SELECT n.id,
+CONCAT(REPEAT('. . ', (COUNT(p.id) - 1)::int), n.title) AS t,
+n.title, n.lft, n.rgt, n.depth, n.children_count
+FROM categories AS n, categories AS p
+WHERE (n.lft BETWEEN p.lft AND p.rgt)
+GROUP BY n.id ORDER BY n.lft;
+```
+
 ## License
 
 MIT

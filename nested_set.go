@@ -14,6 +14,7 @@ import (
 // MoveDirection means where the node is going to be located
 type MoveDirection int
 
+// MoveDirections ...
 const (
 	// MoveDirectionLeft : MoveTo(db, a, n, MoveDirectionLeft) => a|n|...
 	MoveDirectionLeft MoveDirection = -1
@@ -229,6 +230,11 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 		return err
 	}
 
+	err = moveIsValid(targetNode, toNode)
+	if err != nil {
+		return err
+	}
+
 	var right, depthChange int
 	var newParentID sql.NullInt64
 	if direction == MoveDirectionLeft || direction == MoveDirectionRight {
@@ -246,6 +252,15 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 	}
 
 	return moveToRightOfPosition(tx, targetNode, right, depthChange, newParentID)
+}
+
+func moveIsValid(node, to nestedItem) error {
+	validLft, validRgt := node.Lft, node.Rgt
+	if (to.Lft >= validLft && to.Lft <= validRgt) || (to.Rgt >= validLft && to.Rgt <= validRgt) {
+		return fmt.Errorf("in valid move target: %v => %v", node, to)
+	}
+
+	return nil
 }
 
 func moveToRightOfPosition(tx *gorm.DB, targetNode nestedItem, position, depthChange int, newParentID sql.NullInt64) error {

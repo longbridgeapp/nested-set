@@ -258,6 +258,24 @@ func TestMoveToInner(t *testing.T) {
 	assertNodeEqual(t, blouses, 19, 20, 2, 0, womens.ID)
 }
 
+func TestMoveIsInvalid(t *testing.T) {
+	initData()
+	err := MoveTo(db, womens, dresses, MoveDirectionInner)
+	assert.NotEmpty(t, err)
+	reloadCategories()
+	assertNodeEqual(t, womens, 10, 21, 1, 3, clothing.ID)
+
+	err = MoveTo(db, womens, dresses, MoveDirectionLeft)
+	assert.NotEmpty(t, err)
+	reloadCategories()
+	assertNodeEqual(t, womens, 10, 21, 1, 3, clothing.ID)
+
+	err = MoveTo(db, womens, dresses, MoveDirectionRight)
+	assert.NotEmpty(t, err)
+	reloadCategories()
+	assertNodeEqual(t, womens, 10, 21, 1, 3, clothing.ID)
+}
+
 func assertNodeEqual(t *testing.T, target Category, left, right, depth, childrenCount int, parentID int64) {
 	nullInt64ParentID := sql.NullInt64{Valid: false}
 	if parentID > 0 {
