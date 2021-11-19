@@ -1,8 +1,8 @@
-# Go Nested Set
+# Nested Set for Go
 
 [![build](https://github.com/longbridgeapp/nested-set/workflows/build/badge.svg)](https://github.com/longbridgeapp/nested-set/actions?query=workflow%3Abuild)
 
-Go Nested Set is an implementation of the [Nested set model](https://en.wikipedia.org/wiki/Nested_set_model) for [Gorm](https://gorm.io/index.html).
+Nested Set is an implementation of the [Nested set model](https://en.wikipedia.org/wiki/Nested_set_model) for [Gorm](https://gorm.io/index.html).
 
 This project is the Go version of [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set), which uses the same data structure design, so it uses the same data together with [awesome_nested_set](https://github.com/collectiveidea/awesome_nested_set).
 
