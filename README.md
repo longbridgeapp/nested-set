@@ -1,6 +1,6 @@
 # Go Nested Set
 
-[![build](https://github.com/griffinqiu/go-nested-set/workflows/build/badge.svg)](https://github.com/griffinqiu/go-nested-set/actions?query=workflow%3Abuild)
+[![build](https://github.com/longbridgeapp/nested-set/workflows/build/badge.svg)](https://github.com/longbridgeapp/nested-set/actions?query=workflow%3Abuild)
 
 Go Nested Set is an implementation of the [Nested set model](https://en.wikipedia.org/wiki/Nested_set_model) for [Gorm](https://gorm.io/index.html).
 
@@ -21,7 +21,7 @@ For manage a nested tree node like this:
 ## Installation
 
 ```
-go get github.com/griffinqiu/go-nested-set
+go get github.com/longbridgeapp/nested-set
 ```
 
 ## Usage
@@ -48,7 +48,7 @@ Example:
 ```go
 import (
   "database/sql"
-  "github.com/griffinqiu/go-nested-set"
+  "github.com/longbridgeapp/nested-set"
 )
 
 // Category
@@ -68,7 +68,7 @@ type Category struct {
 ### Move Node
 
 ```go
-import nestedset "github.com/griffinqiu/go-nested-set"
+import nestedset "github.com/longbridgeapp/nested-set"
 
 // create a new node root level last child
 nestedset.Create(tx, &node, nil)

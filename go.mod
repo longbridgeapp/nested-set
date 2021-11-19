@@ -1,4 +1,4 @@
-module github.com/griffinqiu/go-nested-set
+module github.com/longbridgeapp/nested-set
 
 go 1.14
 
