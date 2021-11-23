@@ -47,8 +47,8 @@ Example:
 
 ```go
 import (
-  "database/sql"
-  "github.com/longbridgeapp/nested-set"
+	"database/sql"
+	"github.com/longbridgeapp/nested-set"
 )
 
 // Category
