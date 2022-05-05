@@ -1,6 +1,7 @@
 package nestedset
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"reflect"
@@ -84,7 +85,7 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nestedItem, e
 			item.DbNames["children_count"] = dbName
 			break
 		case "scope":
-			rawVal, _ := schemaField.ValueOf(sourceValue)
+			rawVal, _ := schemaField.ValueOf(context.TODO(), sourceValue)
 			tx = tx.Where(dbName+" = ?", rawVal)
 			break
 		}
