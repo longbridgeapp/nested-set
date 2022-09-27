@@ -96,7 +96,8 @@ func TestCreateSource(t *testing.T) {
 	initData()
 
 	c1 := Category{Title: "c1s"}
-	Create(db, &c1, nil)
+	var cNil *Category
+	Create(db, &c1, cNil)
 	assert.Equal(t, c1.Lft, 1)
 	assert.Equal(t, c1.Rgt, 2)
 	assert.Equal(t, c1.Depth, 0)

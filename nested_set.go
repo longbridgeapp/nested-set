@@ -109,7 +109,7 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 
 	return tx.Transaction(func(tx *gorm.DB) (err error) {
 		// create node in root level when parent is nil
-		if parent == nil {
+		if parent == nil || (reflect.ValueOf(parent).Kind() == reflect.Ptr && reflect.ValueOf(parent).IsNil()) {
 			lastNode := make(map[string]interface{})
 			rst := tx.Select(dbNames["rgt"]).Order(formatSQL(":rgt DESC", target)).Take(&lastNode)
 			if rst.Error == nil {
