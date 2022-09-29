@@ -214,7 +214,7 @@ func Delete(db *gorm.DB, source interface{}) error {
 			}
 		}
 
-		return nil
+		return syncChildrenCount(tx, target, target.ParentID, sql.NullInt64{})
 	})
 }
 
