@@ -62,13 +62,14 @@ func findNode(query *gorm.DB, id int64) (category Category, err error) {
 }
 
 var CategoryFactory = factory.NewFactory(&Category{
-	Title:    "Clothing",
-	ParentID: sql.NullInt64{Valid: false},
-	UserType: "User",
-	UserID:   999,
-	Rgt:      1,
-	Lft:      2,
-	Depth:    0,
+	Title:         "Clothing",
+	ParentID:      sql.NullInt64{Valid: false},
+	UserType:      "User",
+	UserID:        999,
+	Rgt:           1,
+	Lft:           2,
+	Depth:         0,
+	ChildrenCount: 0,
 }).
 	OnCreate(func(args factory.Args) error {
 		return db.Create(args.Instance()).Error

@@ -252,6 +252,70 @@ func TestRebuild(t *testing.T) {
 	assertNodeEqual(t, skirts, 17, 18, 2, 0, womens.ID)
 	assertNodeEqual(t, blouses, 19, 20, 2, 0, womens.ID)
 	assertNodeEqual(t, hat, 23, 24, 0, 0, 0)
+
+	jacksClothing := *CategoryFactory.MustCreateWithOption(map[string]interface{}{
+		"Title":    "Jack's Clothing",
+		"ParentID": sql.NullInt64{Valid: false},
+		"UserType": "User",
+		"UserID":   8686,
+	}).(*Category)
+	jacksSuits := *CategoryFactory.MustCreateWithOption(map[string]interface{}{
+		"Title":    "Jack's Suits",
+		"ParentID": sql.NullInt64{Valid: true, Int64: jacksClothing.ID},
+		"UserType": "User",
+		"UserID":   8686,
+	}).(*Category)
+	jacksHat := *CategoryFactory.MustCreateWithOption(map[string]interface{}{
+		"Title":    "Jack's Hat",
+		"UserType": "User",
+		"UserID":   8686,
+		"ParentID": sql.NullInt64{Valid: false},
+	}).(*Category)
+	jacksSlacks := *CategoryFactory.MustCreateWithOption(map[string]interface{}{
+		"Title":    "Jack's Slacks",
+		"ParentID": sql.NullInt64{Valid: true, Int64: jacksClothing.ID},
+		"UserType": "User",
+		"UserID":   8686,
+	}).(*Category)
+
+	lilysHat := *CategoryFactory.MustCreateWithOption(map[string]interface{}{
+		"Title":    "Lily's Hat",
+		"UserType": "User",
+		"UserID":   6666,
+		"ParentID": sql.NullInt64{Valid: false},
+	}).(*Category)
+	lilysClothing := *CategoryFactory.MustCreateWithOption(map[string]interface{}{
+		"Title":    "Lily's Clothing",
+		"ParentID": sql.NullInt64{Valid: false},
+		"UserType": "User",
+		"UserID":   6666,
+	}).(*Category)
+	lilysDresses := *CategoryFactory.MustCreateWithOption(map[string]interface{}{
+		"Title":    "Lily's Dresses",
+		"ParentID": sql.NullInt64{Valid: true, Int64: lilysClothing.ID},
+		"UserType": "User",
+		"UserID":   6666,
+	}).(*Category)
+
+	err = Rebuild(db, jacksSuits)
+	assert.NoError(t, err)
+	err = Rebuild(db, lilysHat)
+	assert.NoError(t, err)
+	jacksClothing, _ = findNode(db, jacksClothing.ID)
+	jacksSuits, _ = findNode(db, jacksSuits.ID)
+	jacksSlacks, _ = findNode(db, jacksSlacks.ID)
+	jacksHat, _ = findNode(db, jacksHat.ID)
+	lilysHat, _ = findNode(db, lilysHat.ID)
+	lilysClothing, _ = findNode(db, lilysClothing.ID)
+	lilysDresses, _ = findNode(db, lilysDresses.ID)
+
+	assertNodeEqual(t, jacksClothing, 1, 6, 0, 2, 0)
+	assertNodeEqual(t, jacksSuits, 2, 3, 1, 0, jacksClothing.ID)
+	assertNodeEqual(t, jacksSlacks, 4, 5, 1, 0, jacksClothing.ID)
+	assertNodeEqual(t, jacksHat, 7, 8, 0, 0, 0)
+	assertNodeEqual(t, lilysHat, 1, 2, 0, 0, 0)
+	assertNodeEqual(t, lilysClothing, 3, 6, 0, 1, 0)
+	assertNodeEqual(t, lilysDresses, 4, 5, 1, 0, lilysClothing.ID)
 }
 
 func TestMoveToLeft(t *testing.T) {
