@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
 )
 
@@ -31,11 +33,11 @@ type nestedItem struct {
 	ID            int64
 	ParentID      sql.NullInt64
 	Depth         int
-	Rgt           int
 	Lft           int
+	Rgt           int
 	ChildrenCount int
-	TableName     string
-	DbNames       map[string]string
+	TableName     string            `gorm:"-"`
+	DbNames       map[string]string `gorm:"-"`
 }
 
 // parseNode parse a gorm struct into an internal nested item struct
@@ -108,12 +110,18 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 	dbNames := target.DbNames
 
 	return tx.Transaction(func(tx *gorm.DB) (err error) {
+		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).Pluck("id", &[]int64{}).Error
+		if err != nil {
+			return
+		}
+
 		// create node in root level when parent is nil
 		if parent == nil || (reflect.ValueOf(parent).Kind() == reflect.Ptr && reflect.ValueOf(parent).IsNil()) {
 			lastNode := make(map[string]interface{})
 			rst := tx.Select(dbNames["rgt"]).Order(formatSQL(":rgt DESC", target)).Take(&lastNode)
 			if rst.Error == nil {
-				setToLft = int(lastNode[dbNames["rgt"]].(int64) + 1)
+				lastNodeRgt, _ := strconv.Atoi(fmt.Sprintf("%d", lastNode[dbNames["rgt"]]))
+				setToLft = lastNodeRgt + 1
 				setToRgt = setToLft + 1
 			}
 		} else {
@@ -196,6 +204,11 @@ func Delete(db *gorm.DB, source interface{}) error {
 	}
 
 	return tx.Transaction(func(tx *gorm.DB) (err error) {
+		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).Pluck("id", &[]int64{}).Error
+		if err != nil {
+			return
+		}
+
 		err = tx.Where(formatSQL(":lft >= ? AND :rgt <= ?", target), target.Lft, target.Rgt).
 			Delete(source).Error
 		if err != nil {
@@ -255,6 +268,42 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 	return moveToRightOfPosition(tx, targetNode, right, depthChange, newParentID)
 }
 
+// Rebuild rebuild nodes as any nestedset which in the scope
+// ```nestedset.Rebuild(db, &node)``` will rebuild [&node] as nestedset
+func Rebuild(db *gorm.DB, source interface{}) error {
+	tx, target, err := parseNode(db, source)
+	if err != nil {
+		return err
+	}
+	return tx.Transaction(func(tx *gorm.DB) (err error) {
+		allItems := []*nestedItem{}
+		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where(formatSQL("", target)).
+			Find(&allItems).
+			Order(formatSQL(":parent_id ASC, :lft ASC", target)).
+			Error
+
+		if err != nil {
+			return
+		}
+		initTree(allItems).rebuild()
+		for _, item := range allItems {
+			err = tx.Table(target.TableName).
+				Where(formatSQL(":id=?", target), item.ID).
+				Updates(map[string]interface{}{
+					target.DbNames["lft"]:            item.Lft,
+					target.DbNames["rgt"]:            item.Rgt,
+					target.DbNames["depth"]:          item.Depth,
+					target.DbNames["children_count"]: item.ChildrenCount,
+				}).Error
+			if err != nil {
+				return
+			}
+		}
+		return nil
+	})
+}
+
 func moveIsValid(node, to nestedItem) error {
 	validLft, validRgt := node.Lft, node.Rgt
 	if (to.Lft >= validLft && to.Lft <= validRgt) || (to.Rgt >= validLft && to.Rgt <= validRgt) {
@@ -266,6 +315,11 @@ func moveIsValid(node, to nestedItem) error {
 
 func moveToRightOfPosition(tx *gorm.DB, targetNode nestedItem, position, depthChange int, newParentID sql.NullInt64) error {
 	return tx.Transaction(func(tx *gorm.DB) (err error) {
+		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).Pluck("id", &[]int64{}).Error
+		if err != nil {
+			return
+		}
+
 		oldParentID := targetNode.ParentID
 		targetRight := targetNode.Rgt
 		targetLeft := targetNode.Lft

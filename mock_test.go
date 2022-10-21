@@ -36,10 +36,10 @@ type Category struct {
 	UserID        int           `nestedset:"scope"`
 	UserType      string        `nestedset:"scope"`
 	ParentID      sql.NullInt64 `nestedset:"parent_id"`
-	Rgt           int           `nestedset:"rgt"`
-	Lft           int           `nestedset:"lft"`
-	Depth         int           `nestedset:"depth"`
-	ChildrenCount int           `nestedset:"children_count"`
+	Rgt           int           `nestedset:"rgt" gorm:"type:int4"`
+	Lft           int           `nestedset:"lft" gorm:"type:int4"`
+	Depth         int           `nestedset:"depth" gorm:"type:int4"`
+	ChildrenCount int           `nestedset:"children_count" gorm:"type:int4"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -62,13 +62,14 @@ func findNode(query *gorm.DB, id int64) (category Category, err error) {
 }
 
 var CategoryFactory = factory.NewFactory(&Category{
-	Title:    "Clothing",
-	ParentID: sql.NullInt64{Valid: false},
-	UserType: "User",
-	UserID:   999,
-	Rgt:      1,
-	Lft:      2,
-	Depth:    0,
+	Title:         "Clothing",
+	ParentID:      sql.NullInt64{Valid: false},
+	UserType:      "User",
+	UserID:        999,
+	Rgt:           1,
+	Lft:           2,
+	Depth:         0,
+	ChildrenCount: 0,
 }).
 	OnCreate(func(args factory.Args) error {
 		return db.Create(args.Instance()).Error
