@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -119,7 +120,8 @@ func Create(db *gorm.DB, source, parent interface{}) error {
 			lastNode := make(map[string]interface{})
 			rst := tx.Select(dbNames["rgt"]).Order(formatSQL(":rgt DESC", target)).Take(&lastNode)
 			if rst.Error == nil {
-				setToLft = int(lastNode[dbNames["rgt"]].(int64) + 1)
+				lastNodeRgt, _ := strconv.Atoi(fmt.Sprintf("%d", lastNode[dbNames["rgt"]]))
+				setToLft = lastNodeRgt + 1
 				setToRgt = setToLft + 1
 			}
 		} else {
@@ -266,7 +268,7 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 	return moveToRightOfPosition(tx, targetNode, right, depthChange, newParentID)
 }
 
-// Rebuild rebuild nodes as nestedset
+// Rebuild rebuild nodes as any nestedset which in the scope
 // ```nestedset.Rebuild(db, &node)``` will rebuild [&node] as nestedset
 func Rebuild(db *gorm.DB, source interface{}) error {
 	tx, target, err := parseNode(db, source)
@@ -276,9 +278,9 @@ func Rebuild(db *gorm.DB, source interface{}) error {
 	return tx.Transaction(func(tx *gorm.DB) (err error) {
 		allItems := []*nestedItem{}
 		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where(formatSQL("1=1", target)).
+			Where(formatSQL("", target)).
 			Find(&allItems).
-			Order("parent_id ASC, lft ASC").
+			Order(formatSQL(":parent_id ASC, :lft ASC", target)).
 			Error
 
 		if err != nil {

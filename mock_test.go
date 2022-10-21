@@ -36,10 +36,10 @@ type Category struct {
 	UserID        int           `nestedset:"scope"`
 	UserType      string        `nestedset:"scope"`
 	ParentID      sql.NullInt64 `nestedset:"parent_id"`
-	Rgt           int           `nestedset:"rgt"`
-	Lft           int           `nestedset:"lft"`
-	Depth         int           `nestedset:"depth"`
-	ChildrenCount int           `nestedset:"children_count"`
+	Rgt           int           `nestedset:"rgt" gorm:"type:int4"`
+	Lft           int           `nestedset:"lft" gorm:"type:int4"`
+	Depth         int           `nestedset:"depth" gorm:"type:int4"`
+	ChildrenCount int           `nestedset:"children_count" gorm:"type:int4"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
