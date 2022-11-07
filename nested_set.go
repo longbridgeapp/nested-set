@@ -280,7 +280,7 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 
 // Rebuild rebuild nodes as any nestedset which in the scope
 // ```nestedset.Rebuild(db, &node, true)``` will rebuild [&node] as nestedset
-func Rebuild(db *gorm.DB, source interface{}, dirty bool) (affectedCount int, err error) {
+func Rebuild(db *gorm.DB, source interface{}, doUpdate bool) (affectedCount int, err error) {
 	tx, target, err := parseNode(db, source)
 	if err != nil {
 		return
@@ -300,7 +300,7 @@ func Rebuild(db *gorm.DB, source interface{}, dirty bool) (affectedCount int, er
 		for _, item := range allItems {
 			if item.IsChanged {
 				affectedCount += 1
-				if !dirty {
+				if doUpdate {
 					err = tx.Table(target.TableName).
 						Where(formatSQL(":id=?", target), item.ID).
 						Updates(map[string]interface{}{

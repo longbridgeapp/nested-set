@@ -189,7 +189,7 @@ func TestMoveToRight(t *testing.T) {
 
 func TestRebuild(t *testing.T) {
 	initData()
-	affectedCount, err := Rebuild(db, clothing, false)
+	affectedCount, err := Rebuild(db, clothing, true)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, affectedCount)
 	reloadCategories()
@@ -215,7 +215,7 @@ func TestRebuild(t *testing.T) {
 	reloadCategories()
 	assertNodeEqual(t, sunDresses, 12, 123, 1, 100, dresses.ID)
 
-	affectedCount, err = Rebuild(db, clothing, false)
+	affectedCount, err = Rebuild(db, clothing, true)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, affectedCount)
 	reloadCategories()
@@ -237,11 +237,11 @@ func TestRebuild(t *testing.T) {
 		"ParentID": sql.NullInt64{Valid: false},
 	}).(*Category)
 
-	affectedCount, err = Rebuild(db, clothing, true)
+	affectedCount, err = Rebuild(db, clothing, false)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, affectedCount)
 
-	affectedCount, err = Rebuild(db, clothing, false)
+	affectedCount, err = Rebuild(db, clothing, true)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, affectedCount)
 	reloadCategories()
@@ -304,10 +304,10 @@ func TestRebuild(t *testing.T) {
 		"UserID":   6666,
 	}).(*Category)
 
-	affectedCount, err = Rebuild(db, jacksSuits, false)
+	affectedCount, err = Rebuild(db, jacksSuits, true)
 	assert.NoError(t, err)
 	assert.Equal(t, 4, affectedCount)
-	affectedCount, err = Rebuild(db, lilysHat, false)
+	affectedCount, err = Rebuild(db, lilysHat, true)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, affectedCount)
 	jacksClothing, _ = findNode(db, jacksClothing.ID)
