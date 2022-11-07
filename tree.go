@@ -66,15 +66,24 @@ func (tree *Tree) rebuild() *Tree {
 	return tree
 }
 
-func travelNode(node *TreeNode, count, depth int) int {
-	count += 1
-	node.Lft = count
+func travelNode(node *TreeNode, lft, depth int) int {
+	original := &nestedItem{
+		ID:            node.ID,
+		ParentID:      node.ParentID,
+		Depth:         node.Depth,
+		Lft:           node.Lft,
+		Rgt:           node.Rgt,
+		ChildrenCount: node.ChildrenCount,
+	}
+	lft += 1
+	node.Lft = lft
 	node.ChildrenCount = len(node.Children)
 	node.Depth = depth
 	for _, childNode := range node.Children {
-		count = travelNode(childNode, count, depth+1)
+		lft = travelNode(childNode, lft, depth+1)
 	}
-	count += 1
-	node.Rgt = count
-	return count
+	lft += 1
+	node.Rgt = lft
+	node.IsChanged = node.nestedItem.IsPositionSame(original)
+	return lft
 }

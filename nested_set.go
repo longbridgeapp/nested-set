@@ -38,6 +38,16 @@ type nestedItem struct {
 	ChildrenCount int
 	TableName     string            `gorm:"-"`
 	DbNames       map[string]string `gorm:"-"`
+	IsChanged     bool              `gorm:"-"`
+}
+
+func (item *nestedItem) IsPositionSame(original *nestedItem) bool {
+	return item.ID != original.ID ||
+		item.ParentID != original.ParentID ||
+		item.Depth != original.Depth ||
+		item.Lft != original.Lft ||
+		item.Rgt != original.Rgt ||
+		item.ChildrenCount != original.ChildrenCount
 }
 
 // parseNode parse a gorm struct into an internal nested item struct
@@ -269,13 +279,13 @@ func MoveTo(db *gorm.DB, node, to interface{}, direction MoveDirection) error {
 }
 
 // Rebuild rebuild nodes as any nestedset which in the scope
-// ```nestedset.Rebuild(db, &node)``` will rebuild [&node] as nestedset
-func Rebuild(db *gorm.DB, source interface{}) error {
+// ```nestedset.Rebuild(db, &node, true)``` will rebuild [&node] as nestedset
+func Rebuild(db *gorm.DB, source interface{}, dirty bool) (affectedCount int, err error) {
 	tx, target, err := parseNode(db, source)
 	if err != nil {
-		return err
+		return
 	}
-	return tx.Transaction(func(tx *gorm.DB) (err error) {
+	err = tx.Transaction(func(tx *gorm.DB) (err error) {
 		allItems := []*nestedItem{}
 		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where(formatSQL("", target)).
@@ -288,20 +298,26 @@ func Rebuild(db *gorm.DB, source interface{}) error {
 		}
 		initTree(allItems).rebuild()
 		for _, item := range allItems {
-			err = tx.Table(target.TableName).
-				Where(formatSQL(":id=?", target), item.ID).
-				Updates(map[string]interface{}{
-					target.DbNames["lft"]:            item.Lft,
-					target.DbNames["rgt"]:            item.Rgt,
-					target.DbNames["depth"]:          item.Depth,
-					target.DbNames["children_count"]: item.ChildrenCount,
-				}).Error
-			if err != nil {
-				return
+			if item.IsChanged {
+				affectedCount += 1
+				if !dirty {
+					err = tx.Table(target.TableName).
+						Where(formatSQL(":id=?", target), item.ID).
+						Updates(map[string]interface{}{
+							target.DbNames["lft"]:            item.Lft,
+							target.DbNames["rgt"]:            item.Rgt,
+							target.DbNames["depth"]:          item.Depth,
+							target.DbNames["children_count"]: item.ChildrenCount,
+						}).Error
+					if err != nil {
+						return
+					}
+				}
 			}
 		}
 		return nil
 	})
+	return
 }
 
 func moveIsValid(node, to nestedItem) error {
