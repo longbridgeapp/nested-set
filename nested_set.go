@@ -69,6 +69,9 @@ func parseNode(db *gorm.DB, source interface{}) (tx *gorm.DB, item nestedItem, e
 		v := sourceValue.Field(i)
 
 		schemaField := scm.LookUpField(t.Name)
+		if schemaField == nil {
+		    continue;
+		}
 		dbName := schemaField.DBName
 
 		switch t.Tag.Get("nestedset") {
