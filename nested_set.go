@@ -292,8 +292,8 @@ func Rebuild(db *gorm.DB, source interface{}, doUpdate bool) (affectedCount int,
 		allItems := []*nestedItem{}
 		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where(formatSQL("", target)).
+			Order(formatSQL(":parent_id ASC NULLS FIRST, :lft ASC", target)).
 			Find(&allItems).
-			Order(formatSQL(":parent_id ASC, :lft ASC", target)).
 			Error
 
 		if err != nil {
